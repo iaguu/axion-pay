@@ -6,13 +6,19 @@ import { ApiDetailsPage } from "./pages/ApiDetailsPage";
 import { StatusPage } from "./pages/StatusPage";
 import { AuthLoginPage } from "./pages/AuthLoginPage";
 import { AuthSignupPage } from "./pages/AuthSignupPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { ConfirmEmailPage } from "./pages/ConfirmEmailPage";
+import { AdminLoginPage } from "./pages/AdminLoginPage";
+import { AdminPanelPage } from "./pages/AdminPanelPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 const NAV_ITEMS = [
   { path: "/", label: "AxionPAY" },
-  { path: "/api", label: "API e Integração" },
+  { path: "/api", label: "API e Integracao" },
   { path: "/api/reference", label: "API Reference" },
-  { path: "/status", label: "Status da API" }
+  { path: "/status", label: "Status da API" },
+  { path: "/painel", label: "Painel" },
+  { path: "/admin", label: "Admin" }
 ];
 
 export default function App() {
@@ -54,6 +60,10 @@ export default function App() {
           <Route path="/status" element={<StatusPage />} />
           <Route path="/login" element={<AuthLoginPage />} />
           <Route path="/cadastro" element={<AuthSignupPage />} />
+          <Route path="/confirmacao" element={<ConfirmEmailPage />} />
+          <Route path="/painel" element={<DashboardPage />} />
+          <Route path="/admin" element={<AdminPanelPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
@@ -62,14 +72,14 @@ export default function App() {
           <div>
             <div className="brand-mark">AxionPAY</div>
             <p>
-              Gateway de pagamentos com performance, segurança e governança para
-              operações digitais.
+              Gateway de pagamentos com performance, seguranca e governanca para
+              operacoes digitais.
             </p>
           </div>
           <div>
             <div className="footer-title">Produto</div>
             <ul>
-              <li>PIX, cartões e assinaturas</li>
+              <li>PIX, cartoes e assinaturas</li>
               <li>Split e subcontas</li>
               <li>Antifraude e chargebacks</li>
             </ul>
@@ -91,13 +101,13 @@ export default function App() {
                 <Link to="/status">Status da API</Link>
               </li>
               <li>Central de ajuda</li>
-              <li>SLA e segurança</li>
+              <li>SLA e seguranca</li>
             </ul>
           </div>
         </div>
         <div className="footer-meta">
           <span>AxionPAY 2025. Todos os direitos reservados.</span>
-          <span>Ambiente de demonstração.</span>
+          <span>Ambiente de demonstracao.</span>
         </div>
       </footer>
     </div>

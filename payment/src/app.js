@@ -7,6 +7,9 @@ import { v4 as uuid } from "uuid";
 import { config } from "./config/env.js";
 import paymentsRouter from "./routes/payments.js";
 import webhooksRouter from "./routes/webhooks.js";
+import authRouter from "./routes/auth.js";
+import accountRouter from "./routes/account.js";
+import adminRouter from "./routes/admin.js";
 import { requireApiKey } from "./middlewares/auth.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errors.js";
 import { logger } from "./utils/logger.js";
@@ -78,6 +81,9 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.use("/auth", authRouter);
+app.use("/account", accountRouter);
+app.use("/admin", adminRouter);
 app.use("/payments", requireApiKey, paymentsRouter);
 app.use("/webhooks", webhooksRouter);
 

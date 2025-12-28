@@ -9,7 +9,7 @@ const QUICKSTART = [
   },
   {
     title: "Inicie a API",
-    description: "Rode o servidor e use a base local: http://localhost:3000."
+    description: "Rode o servidor e use a base local: http://localhost:3060."
   },
   {
     title: "Crie um pagamento",
@@ -224,7 +224,7 @@ info:
   title: AxionPAY Payment API
   version: 0.2.0
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3060
 security:
   - ApiKeyAuth: []
 components:
@@ -336,7 +336,7 @@ export function ApiReferencePage() {
           <div className="panel-card">
             <div className="panel-title">Base URL local</div>
             <p className="panel-text">
-              Desenvolvimento: <strong>http://localhost:3000</strong>
+              Desenvolvimento: <strong>http://localhost:3060</strong>
             </p>
             <div className="panel-status">
               <span className="status-dot ok" />
@@ -474,7 +474,7 @@ export function ApiReferencePage() {
           <h2>Rotas reais da API.</h2>
           <p>
             Todas as rotas abaixo estão disponíveis no serviço em
-            http://localhost:3000.
+            http://localhost:3060.
           </p>
         </div>
         <div className="endpoint-group">

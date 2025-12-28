@@ -281,7 +281,7 @@ export function ApiDetailsPage() {
           <div className="panel-card">
             <div className="panel-title">Base URL</div>
             <p className="panel-text">
-              Local: <strong>http://localhost:3000</strong>
+              Local: <strong>http://localhost:3060</strong>
             </p>
           </div>
           <div className="panel-card">

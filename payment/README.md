@@ -47,9 +47,9 @@ Este repositorio contem um prototipo de API de pagamentos em **Node.js + Express
    npm run dev
    ```
 
-4. A API sobe em `http://localhost:3000`.
+4. A API sobe em `http://localhost:3060`.
 
-> Autenticacao: use `API_KEY` e `AUTH_REQUIRED=true` para exigir `x-api-key` ou `Authorization: Bearer` nas rotas `/payments`.
+> Autenticacao: use `API_KEY` e `AUTH_REQUIRED=true` para exigir `x-api-key` ou `Authorization: Bearer` nas rotas `/payments`. O sistema tambem aceita chaves geradas por usuario (fluxo `/auth` + `/account`).
 
 ## Testes automatizados
 
@@ -73,6 +73,10 @@ PIX so roda se `WOOVI_PIX_CONFIRM_PATH` estiver configurado.
 - `TRUST_PROXY`
 - `API_KEY`
 - `AUTH_REQUIRED`
+- `SESSION_TTL_DAYS`
+- `ADMIN_SESSION_TTL_DAYS`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 - `CORS_ORIGINS`
 - `CORS_CREDENTIALS`
 - `RATE_LIMIT_WINDOW_MS`
@@ -80,7 +84,21 @@ PIX so roda se `WOOVI_PIX_CONFIRM_PATH` estiver configurado.
 - `LOG_LEVEL`
 - `LOG_PRETTY`
 - `WOOVI_LOG_PATH`
+- `EMAIL_FROM`
+- `EMAIL_CONFIRM_BASE_URL`
+- `DOCS_URL`
+- `EMAIL_OUTBOX_PATH`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_SECURE`
 - `DB_PATH`
+- `PIX_KEY`
+- `PIX_MERCHANT_NAME`
+- `PIX_MERCHANT_CITY`
+- `PIX_DESCRIPTION`
+- `PIX_TXID`
 - `PAGARME_API_KEY`
 - `PAGARME_BASE_URL`
 - `WOOVI_API_KEY`
@@ -142,6 +160,20 @@ O contrato completo esta em `docs/openapi.yaml`.
 ### Health
 
 - `GET /health` - status da API
+
+## Usuarios e admin
+
+- `POST /auth/signup` - cria usuario, gera API key inicial e envia confirmacao de email
+- `POST /auth/login` - cria sessao do usuario
+- `GET /auth/confirm?token=...` - confirma email
+- `GET /account/me` - dados do usuario e chaves
+- `POST /account/api-keys` - gera nova chave
+- `DELETE /account/api-keys/:id` - revoga chave
+- `POST /admin/login` - login admin (padrao admin/123)
+- `GET /admin/users` - lista usuarios
+- `PATCH /admin/users/:id/approve` - aprova conta
+- `PATCH /admin/users/:id/reject` - rejeita conta
+- `POST /admin/users/:id/send-docs` - envia documentacao por email
 
 ## Status possiveis
 

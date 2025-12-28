@@ -1,16 +1,9 @@
 import { config } from "../config/env.js";
+import { findUserByApiKey } from "../models/userStore.js";
 
 export function requireApiKey(req, res, next) {
   if (!config.auth.required) {
     return next();
-  }
-
-  if (!config.auth.apiKey) {
-    return res.status(500).json({
-      ok: false,
-      error: "API key nao configurada no servidor.",
-      code: "auth_misconfigured"
-    });
   }
 
   if (req.method === "OPTIONS") {
@@ -33,7 +26,12 @@ export function requireApiKey(req, res, next) {
     });
   }
 
-  if (token !== config.auth.apiKey) {
+  if (config.auth.apiKey && token === config.auth.apiKey) {
+    return next();
+  }
+
+  const user = findUserByApiKey(token);
+  if (!user) {
     return res.status(403).json({
       ok: false,
       error: "API key invalida.",
@@ -41,5 +39,22 @@ export function requireApiKey(req, res, next) {
     });
   }
 
+  if (!user.email_verified) {
+    return res.status(403).json({
+      ok: false,
+      error: "Conta sem email confirmado.",
+      code: "email_unverified"
+    });
+  }
+
+  if (user.status !== "approved") {
+    return res.status(403).json({
+      ok: false,
+      error: "Conta nao aprovada para uso.",
+      code: "account_not_approved"
+    });
+  }
+
+  req.apiUser = user;
   return next();
 }

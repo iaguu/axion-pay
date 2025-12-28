@@ -50,6 +50,15 @@ function getIdempotencyKey(req) {
   return value.length ? value : null;
 }
 
+function extractPixPayload(tx) {
+  return (
+    tx?.metadata?.pix?.copia_colar ||
+    tx?.metadata?.pix?.qrcode ||
+    tx?.metadata?.pix?.payload ||
+    null
+  );
+}
+
 function buildPaymentInput(body, methodOverride) {
   const method = (methodOverride || body.method || "").toString().toLowerCase();
   if (!method) {
@@ -137,11 +146,16 @@ export async function createPaymentHandler(req, res) {
     if (idempotencyKey) {
       const existing = getPaymentByIdempotencyKey(idempotencyKey);
       if (existing) {
+        const pixPayload = existing.method === "pix" ? extractPixPayload(existing) : null;
         return res
           .status(200)
           .set("Location", `/payments/${existing.id}`)
           .set("Idempotency-Status", "replayed")
-          .json({ ok: true, transaction: existing });
+          .json({
+            ok: true,
+            transaction: existing,
+            ...(pixPayload ? { pix_payload: pixPayload } : {})
+          });
       }
     }
 
@@ -150,7 +164,12 @@ export async function createPaymentHandler(req, res) {
     if (idempotencyKey) {
       response.set("Idempotency-Status", "created");
     }
-    return response.json({ ok: true, transaction: tx });
+    const pixPayload = tx.method === "pix" ? extractPixPayload(tx) : null;
+    return response.json({
+      ok: true,
+      transaction: tx,
+      ...(pixPayload ? { pix_payload: pixPayload } : {})
+    });
   } catch (err) {
     return handleError(res, err);
   }
@@ -167,11 +186,16 @@ export async function createPixPaymentHandler(req, res) {
     if (idempotencyKey) {
       const existing = getPaymentByIdempotencyKey(idempotencyKey);
       if (existing) {
+        const pixPayload = extractPixPayload(existing);
         return res
           .status(200)
           .set("Location", `/payments/${existing.id}`)
           .set("Idempotency-Status", "replayed")
-          .json({ ok: true, transaction: existing });
+          .json({
+            ok: true,
+            transaction: existing,
+            ...(pixPayload ? { pix_payload: pixPayload } : {})
+          });
       }
     }
 
@@ -180,7 +204,12 @@ export async function createPixPaymentHandler(req, res) {
     if (idempotencyKey) {
       response.set("Idempotency-Status", "created");
     }
-    return response.json({ ok: true, transaction: tx });
+    const pixPayload = extractPixPayload(tx);
+    return response.json({
+      ok: true,
+      transaction: tx,
+      ...(pixPayload ? { pix_payload: pixPayload } : {})
+    });
   } catch (err) {
     return handleError(res, err);
   }

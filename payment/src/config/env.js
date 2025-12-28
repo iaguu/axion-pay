@@ -56,7 +56,7 @@ for (const [key, value] of Object.entries(envConfig)) {
 }
 
 export const config = {
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 3060,
   env: process.env.NODE_ENV || "development",
   trustProxy: parseNumber(process.env.TRUST_PROXY, 0),
   db: {
@@ -65,6 +65,14 @@ export const config = {
   auth: {
     apiKey: process.env.API_KEY || "",
     required: parseBoolean(process.env.AUTH_REQUIRED, Boolean(process.env.API_KEY))
+  },
+  sessions: {
+    ttlDays: parseNumber(process.env.SESSION_TTL_DAYS, 7),
+    adminTtlDays: parseNumber(process.env.ADMIN_SESSION_TTL_DAYS, 1)
+  },
+  admin: {
+    username: process.env.ADMIN_USERNAME || "admin",
+    password: process.env.ADMIN_PASSWORD || "123"
   },
   cors: {
     origins: parseCorsOrigins(process.env.CORS_ORIGINS),
@@ -90,6 +98,26 @@ export const config = {
     wooviSecret: process.env.WOOVI_WEBHOOK_SECRET || "",
     requireTimestamp: parseBoolean(process.env.WEBHOOK_REQUIRE_TIMESTAMP, false),
     toleranceSeconds: parseNumber(process.env.WEBHOOK_TOLERANCE_SECONDS, 300)
+  },
+  email: {
+    from: process.env.EMAIL_FROM || "no-reply@axionpay.local",
+    confirmBaseUrl: process.env.EMAIL_CONFIRM_BASE_URL || "http://localhost:3000",
+    docsUrl: process.env.DOCS_URL || "http://localhost:3000/api",
+    outboxPath: process.env.EMAIL_OUTBOX_PATH || "logs/email-outbox.jsonl",
+    smtp: {
+      host: process.env.SMTP_HOST || "",
+      port: parseNumber(process.env.SMTP_PORT, 0),
+      user: process.env.SMTP_USER || "",
+      pass: process.env.SMTP_PASS || "",
+      secure: parseBoolean(process.env.SMTP_SECURE, false)
+    }
+  },
+  pix: {
+    key: process.env.PIX_KEY || "",
+    merchantName: process.env.PIX_MERCHANT_NAME || "",
+    merchantCity: process.env.PIX_MERCHANT_CITY || "",
+    description: process.env.PIX_DESCRIPTION || "",
+    txid: process.env.PIX_TXID || "***"
   },
   pagarme: {
     apiKey: process.env.PAGARME_API_KEY || "",

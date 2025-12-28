@@ -11,11 +11,8 @@ import {
   setIdempotencyKey,
   getTransactionByIdempotencyKey
 } from "../models/transactionStore.js";
-import {
-  createPixCharge,
-  confirmPixPayment,
-  createCardTransactionWithWoovi
-} from "./providers/wooviProvider.js";
+import { createPixCharge, confirmPixPayment } from "./providers/pixProviderMock.js";
+import { createCardTransactionWithWoovi } from "./providers/wooviProvider.js";
 import { logger } from "../utils/logger.js";
 import { AppError } from "../utils/errors.js";
 import { buildCardSummary, normalizeMetadata } from "../utils/validation.js";

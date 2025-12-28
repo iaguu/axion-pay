@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import request from "supertest";
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { logTestEvent, getTestLogPath } from "./testLogger.js";
 
 let app;
 let pixReference;
@@ -18,6 +19,9 @@ describe("Payment API", () => {
     process.env.DB_PATH = ":memory:";
     process.env.WEBHOOK_REQUIRE_TIMESTAMP = "true";
     process.env.WEBHOOK_TOLERANCE_SECONDS = "300";
+    process.env.PIX_KEY = "38209847805";
+    process.env.PIX_MERCHANT_NAME = "LOJA AXION";
+    process.env.PIX_MERCHANT_CITY = "SAO PAULO";
     if (!useRealWoovi) {
       process.env.WOOVI_API_KEY = "";
       process.env.WOOVI_BASE_URL = "";
@@ -30,23 +34,31 @@ describe("Payment API", () => {
     const configMod = await import("../src/config/env.js");
     runtimeConfig = configMod.config;
 
-    if (useRealWoovi) {
-      const hasConfig = Boolean(
-        runtimeConfig.woovi.apiKey &&
-          runtimeConfig.woovi.baseURL &&
-          runtimeConfig.woovi.pixPath
-      );
-      if (!hasConfig) {
-        throw new Error(
-          "USE_REAL_WOOVI=true exige WOOVI_API_KEY, WOOVI_BASE_URL e WOOVI_PIX_PATH configurados."
-        );
+    logTestEvent({
+      type: "suite_start",
+      message: "Starting Payment API tests",
+      data: {
+        useRealWoovi,
+        shouldTestWebhook,
+        logPath: getTestLogPath()
       }
-      shouldTestWebhook = Boolean(runtimeConfig.woovi.pixConfirmPath);
-    }
+    });
+  });
+
+  afterAll(() => {
+    logTestEvent({
+      type: "suite_end",
+      message: "Finished Payment API tests"
+    });
   });
 
   it("exposes health endpoint", async () => {
     const response = await request(app).get("/health");
+    logTestEvent({
+      type: "http_request",
+      message: "GET /health",
+      data: { status: response.status, ok: response.body?.ok }
+    });
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(response.body.status).toBe("UP");
@@ -54,6 +66,11 @@ describe("Payment API", () => {
 
   it("rejects requests without API key", async () => {
     const response = await request(app).get("/payments");
+    logTestEvent({
+      type: "http_request",
+      message: "GET /payments without API key",
+      data: { status: response.status, code: response.body?.code }
+    });
     expect(response.status).toBe(401);
     expect(response.body.ok).toBe(false);
   });
@@ -75,29 +92,29 @@ describe("Payment API", () => {
         metadata: { order: "123" }
       });
 
+    const pixPayload =
+      response.body?.pix_payload ||
+      response.body?.transaction?.metadata?.pix?.qrcode ||
+      response.body?.transaction?.metadata?.pix?.copia_colar ||
+      "";
+    logTestEvent({
+      type: "pix_create",
+      message: "Created PIX payment",
+      data: {
+        status: response.status,
+        transactionId: response.body?.transaction?.id,
+        provider: response.body?.transaction?.provider,
+        providerReference: response.body?.transaction?.providerReference,
+        amount_cents: response.body?.transaction?.amount_cents,
+        pix_payload: pixPayload,
+        pix_payload_length: pixPayload.length
+      }
+    });
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.transaction.method).toBe("pix");
-    if (useRealWoovi) {
-      const status = response.body.transaction.status;
-      if (status === "failed") {
-        const metadata = response.body.transaction?.metadata;
-        const errorPayload =
-          metadata?.error ??
-          metadata ??
-          response.body.transaction ??
-          response.body ??
-          "unknown_error";
-        throw new Error(
-          `Woovi PIX failed: ${JSON.stringify(errorPayload, null, 2)}`
-        );
-      }
-      expect(["pending", "authorized", "paid"].includes(status)).toBe(true);
-      expect(response.body.transaction.provider).toBe("woovi");
-    } else {
-      expect(response.body.transaction.status).toBe("pending");
-      expect(response.body.transaction.provider).toBe("woovi-mock");
-    }
+    expect(response.body.transaction.status).toBe("pending");
+    expect(response.body.transaction.provider).toBe("pix-local");
     expect(response.body.transaction.amount_cents).toBe(1234);
     expect(response.headers.location).toMatch(/\/payments\//);
 
@@ -138,6 +155,19 @@ describe("Payment API", () => {
       .set("Idempotency-Key", "idem-123")
       .send(payload);
 
+    logTestEvent({
+      type: "card_idempotency",
+      message: "Card payment idempotency check",
+      data: {
+        firstStatus: first.status,
+        secondStatus: second.status,
+        idempotencyStatus: {
+          first: first.headers["idempotency-status"],
+          second: second.headers["idempotency-status"]
+        },
+        transactionId: first.body?.transaction?.id
+      }
+    });
     expect(first.status).toBe(201);
     expect(first.headers["idempotency-status"]).toBe("created");
     expect(second.status).toBe(200);
@@ -169,6 +199,17 @@ describe("Payment API", () => {
         capture: false
       });
 
+    logTestEvent({
+      type: "card_create",
+      message: "Created card payment",
+      data: {
+        status: response.status,
+        transactionId: response.body?.transaction?.id,
+        provider: response.body?.transaction?.provider,
+        paymentStatus: response.body?.transaction?.status,
+        amount_cents: response.body?.transaction?.amount_cents
+      }
+    });
     expect(response.status).toBe(201);
     expect(response.body.ok).toBe(true);
     expect(response.body.transaction.method).toBe("card");
@@ -177,6 +218,11 @@ describe("Payment API", () => {
 
   it("processes PIX webhook with valid signature", async () => {
     if (!shouldTestWebhook) {
+      logTestEvent({
+        type: "pix_webhook_skip",
+        message: "Skipping PIX webhook test",
+        data: { reason: "shouldTestWebhook=false" }
+      });
       return;
     }
     const payload = {
@@ -197,6 +243,15 @@ describe("Payment API", () => {
       .set("Content-Type", "application/json")
       .send(rawBody);
 
+    logTestEvent({
+      type: "pix_webhook",
+      message: "Processed PIX webhook",
+      data: {
+        status: response.status,
+        transactionId: response.body?.transaction?.id,
+        paymentStatus: response.body?.transaction?.status
+      }
+    });
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(response.body.transaction.id).toBe(pixTransactionId);
@@ -207,6 +262,16 @@ describe("Payment API", () => {
     const response = await request(app)
       .get("/payments/stats")
       .set("x-api-key", process.env.API_KEY);
+    logTestEvent({
+      type: "stats",
+      message: "Fetched payment stats",
+      data: {
+        status: response.status,
+        total: response.body?.stats?.total,
+        total_amount_cents: response.body?.stats?.total_amount_cents,
+        total_paid_cents: response.body?.stats?.total_paid_cents
+      }
+    });
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
     expect(response.body.stats.total).toBeGreaterThan(0);

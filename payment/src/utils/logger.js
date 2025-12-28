@@ -30,6 +30,8 @@ export const logger = pino(
       paths: [
         "req.headers.authorization",
         "req.headers['x-api-key']",
+        "req.headers['x-session-token']",
+        "req.headers['x-admin-token']",
         "req.headers['idempotency-key']",
         "req.body.card",
         "req.body.card_number",

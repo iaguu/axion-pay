@@ -156,65 +156,7 @@ export async function createPixCharge({ amount, amount_cents, currency, customer
     ? amount_cents
     : Math.round((amount || 0) * 100);
 
-  if (!canUsePixProvider()) {
-    const mock = await createPixChargeMock({ amount, amount_cents: amountCents, currency, metadata });
-    return buildPixMockResult(mock);
-  }
-
-  const client = buildClient();
-  if (!client) {
-    const mock = await createPixChargeMock({ amount, amount_cents: amountCents, currency, metadata });
-    return buildPixMockResult(mock);
-  }
-
-  const startedAt = Date.now();
-  try {
-    const payload = buildPixPayload({ amount_cents: amountCents, currency, customer, metadata });
-    logger.info({ amount_cents: amountCents }, "Enviando cobranca PIX para Woovi");
-    const response = await client.post(config.woovi.pixPath, payload);
-    const data = response.data || {};
-    const status = mapStatus(data.status || data.charge?.status);
-    const providerReference = extractReference(data);
-    logWooviResponse({
-      operation: "pix_create",
-      requestId: metadata?.transactionId,
-      method: "POST",
-      url: buildLogUrl(response?.config?.baseURL, response?.config?.url || config.woovi.pixPath),
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-      data
-    });
-
-    return {
-      success: status === "paid" || status === "authorized" || status === "pending",
-      status,
-      provider: "woovi",
-      providerReference,
-      raw: redactSensitiveFields(data)
-    };
-  } catch (err) {
-    logWooviError({
-      operation: "pix_create",
-      requestId: metadata?.transactionId,
-      method: "POST",
-      url: buildLogUrl(config.woovi.baseURL, config.woovi.pixPath),
-      status: err?.response?.status,
-      durationMs: Date.now() - startedAt,
-      error: err?.response?.data || err.message
-    });
-    logger.error(
-      { err: err?.response?.data || err?.message },
-      "Erro ao criar cobranca PIX na Woovi"
-    );
-    return {
-      success: false,
-      status: "failed",
-      error: err?.response?.data || String(err),
-      provider: "woovi",
-      providerReference: null,
-      raw: null
-    };
-  }
+  return createPixChargeMock({ amount, amount_cents: amountCents, currency, metadata });
 }
 
 export async function confirmPixPayment(providerReference) {
