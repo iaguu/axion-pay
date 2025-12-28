@@ -22,10 +22,18 @@ function sendError(res, status, message, code) {
 export async function pixWebhookHandler(req, res) {
   try {
     const signature = getFirstHeader(req, ["x-pix-signature", "x-webhook-signature"]);
+    const timestamp = getFirstHeader(req, [
+      "x-pix-timestamp",
+      "x-webhook-timestamp",
+      "x-request-timestamp"
+    ]);
     const verification = verifyWebhookSignature({
       rawBody: req.rawBody,
       signatureHeader: signature,
-      secret: config.webhooks.pixSecret
+      secret: config.webhooks.pixSecret,
+      timestampHeader: timestamp,
+      toleranceSeconds: config.webhooks.toleranceSeconds,
+      requireTimestamp: config.webhooks.requireTimestamp
     });
     if (!verification.ok) {
       return sendError(res, 401, verification.error, "invalid_signature");
@@ -46,7 +54,7 @@ export async function pixWebhookHandler(req, res) {
 
     return res.json({ ok: true, transaction: tx });
   } catch (err) {
-    logger.error("Erro no webhook PIX", err);
+    logger.error({ err }, "Erro no webhook PIX");
     return sendError(res, 500, "Erro interno ao processar webhook PIX.", "internal_error");
   }
 }
@@ -59,10 +67,19 @@ export async function pagarmeWebhookHandler(req, res) {
       "x-hub-signature",
       "x-webhook-signature"
     ]);
+    const timestamp = getFirstHeader(req, [
+      "x-woovi-timestamp",
+      "x-pagarme-timestamp",
+      "x-webhook-timestamp",
+      "x-request-timestamp"
+    ]);
     const verification = verifyWebhookSignature({
       rawBody: req.rawBody,
       signatureHeader: signature,
-      secret: config.webhooks.wooviSecret || config.webhooks.pagarmeSecret
+      secret: config.webhooks.wooviSecret || config.webhooks.pagarmeSecret,
+      timestampHeader: timestamp,
+      toleranceSeconds: config.webhooks.toleranceSeconds,
+      requireTimestamp: config.webhooks.requireTimestamp
     });
     if (!verification.ok) {
       return sendError(res, 401, verification.error, "invalid_signature");
@@ -82,7 +99,7 @@ export async function pagarmeWebhookHandler(req, res) {
 
     return res.json({ ok: true, transaction: tx });
   } catch (err) {
-    logger.error("Erro no webhook Woovi", err);
+    logger.error({ err }, "Erro no webhook Woovi");
     return sendError(res, 500, "Erro interno ao processar webhook Woovi.", "internal_error");
   }
 }

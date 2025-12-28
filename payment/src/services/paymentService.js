@@ -72,7 +72,7 @@ export async function createPayment({
     setIdempotencyKey(idempotencyKey, id);
   }
 
-  logger.info("Criando pagamento", { transactionId: id, method });
+  logger.info({ transactionId: id, method }, "Criando pagamento");
 
   if (method === "pix") {
     const result = await createPixCharge({
@@ -292,7 +292,7 @@ export function updatePaymentMetadata(transactionId, metadataPatch) {
 export async function handlePixWebhook({ providerReference, event }) {
   const tx = findTransactionByProviderReference(providerReference);
   if (!tx) {
-    logger.warn("Transacao nao encontrada para webhook PIX", { providerReference });
+    logger.warn({ providerReference }, "Transacao nao encontrada para webhook PIX");
     return null;
   }
 
@@ -355,10 +355,7 @@ export async function handleWooviWebhook(payload) {
     tx = findTransactionByProviderReference(providerReference);
   }
   if (!tx) {
-    logger.warn("Transacao nao encontrada para webhook Woovi", {
-      transactionId,
-      providerReference
-    });
+    logger.warn({ transactionId, providerReference }, "Transacao nao encontrada para webhook Woovi");
     return null;
   }
 

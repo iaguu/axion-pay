@@ -5,7 +5,7 @@ const QUICKSTART = [
   {
     title: "Configure o ambiente",
     description:
-      "Copie o .env.example, defina PORT e segredos de webhook (PIX e Pagar.me/Woovi)."
+      "Copie o .env.example, defina PORT, API_KEY e segredos de webhook (PIX e Pagar.me/Woovi)."
   },
   {
     title: "Inicie a API",
@@ -14,12 +14,12 @@ const QUICKSTART = [
   {
     title: "Crie um pagamento",
     description:
-      "Use POST /payments/pix ou /payments/card (Idempotency-Key recomendado)."
+      "Use POST /payments/pix ou /payments/card com x-api-key (Idempotency-Key recomendado)."
   },
   {
     title: "Consuma webhooks",
     description:
-      "Valide HMAC no /webhooks/pix e aplique o payload do provedor no /webhooks/pagarme."
+      "Valide HMAC no /webhooks/pix e use timestamp opcional para evitar replay."
   }
 ];
 
@@ -179,6 +179,22 @@ const ERROR_CODES = [
     description: "Assinatura de webhook inválida."
   },
   {
+    code: "unauthorized",
+    description: "API key obrigatória."
+  },
+  {
+    code: "forbidden",
+    description: "API key inválida."
+  },
+  {
+    code: "auth_misconfigured",
+    description: "API key não configurada no servidor."
+  },
+  {
+    code: "payload_too_large",
+    description: "Payload acima do limite configurado."
+  },
+  {
     code: "internal_error",
     description: "Erro interno inesperado."
   }
@@ -188,6 +204,10 @@ const SUPPORT_TOOLS = [
   {
     title: "Idempotência",
     desc: "Use Idempotency-Key para evitar duplicidade em POSTs."
+  },
+  {
+    title: "Autenticação",
+    desc: "Use x-api-key ou Authorization: Bearer nas rotas /payments."
   },
   {
     title: "x-request-id",
@@ -202,9 +222,17 @@ const SUPPORT_TOOLS = [
 const OPENAPI_SNIPPET = `openapi: 3.0.3
 info:
   title: AxionPAY Payment API
-  version: 0.1.0
+  version: 0.2.0
 servers:
   - url: http://localhost:3000
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
 paths:
   /payments/pix:
     post:
@@ -318,6 +346,10 @@ export function ApiReferencePage() {
           <div className="panel-card">
             <div className="panel-title">Headers úteis</div>
             <p className="panel-text">
+              x-api-key: &lt;chave&gt;
+              <br />
+              Authorization: Bearer &lt;chave&gt;
+              <br />
               Idempotency-Key: &lt;uuid&gt;
               <br />
               x-request-id: &lt;gerado pela API&gt;
@@ -350,6 +382,7 @@ export function ApiReferencePage() {
         <div className="section-header">
           <span className="eyebrow">OpenAPI / Swagger</span>
           <h2>Base inicial para documentação automatizada.</h2>
+          <p>Arquivo completo em docs/openapi.yaml.</p>
         </div>
         <div className="code-grid">
           <div className="code-card">
@@ -406,6 +439,7 @@ export function ApiReferencePage() {
             <ul className="bullet-list">
               <li>PIX: header x-pix-signature ou x-webhook-signature.</li>
               <li>Provider: x-pagarme-signature ou x-hub-signature.</li>
+              <li>Timestamp opcional: x-webhook-timestamp (anti-replay).</li>
               <li>Idempotency-Key retorna Idempotency-Status.</li>
             </ul>
           </div>

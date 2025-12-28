@@ -1,11 +1,11 @@
-# Manual de Integração Técnica
+# Manual de Integracao Tecnica
 
-Este manual descreve como um desenvolvedor integra sua aplicação ao Gateway,
-com foco em PIX e cartão via provedores terceiros.
+Este manual descreve como integrar sua aplicacao ao Gateway de Pagamentos,
+com foco em PIX e cartao via provedores terceiros.
 
-## 1. Autenticação
+## 1. Autenticacao
 
-Todas as requisições devem incluir o cabeçalho:
+Todas as requisicoes para `/payments` devem incluir:
 
 ```http
 x-api-key: SUA_CHAVE_DE_API
@@ -13,12 +13,18 @@ Accept: application/json
 Content-Type: application/json
 ```
 
-Ambientes:
+Alternativa:
+
+```http
+Authorization: Bearer SUA_CHAVE_DE_API
+```
+
+Ambientes (exemplo):
 
 - Sandbox: `https://sandbox.api.seugateway.com`
-- Produção: `https://api.seugateway.com`
+- Producao: `https://api.seugateway.com`
 
-## 2. Criar cobrança PIX
+## 2. Criar cobranca PIX
 
 ### Endpoint
 
@@ -32,9 +38,8 @@ POST /payments/pix
 {
   "amount": 129.90,
   "currency": "BRL",
-  "description": "Pedido #548",
   "customer": {
-    "name": "João Silva",
+    "name": "Joao Silva",
     "email": "joao@example.com"
   },
   "metadata": {
@@ -49,17 +54,18 @@ POST /payments/pix
 ```json
 {
   "ok": true,
-  "transactionId": "tx_94f065",
-  "status": "pending",
-  "pix": {
-    "qrcode": "00020126360014BR.GOV.BCB.PIX...",
-    "copia_colar": "000201010212...",
-    "expiresAt": "2025-01-01T12:00:00-03:00"
+  "transaction": {
+    "id": "uuid",
+    "status": "pending",
+    "providerReference": "PIX-1700000000000",
+    "metadata": {
+      "transactionId": "uuid"
+    }
   }
 }
 ```
 
-O `transactionId` deve ser armazenado em seu sistema para futuras consultas e conciliação.
+O `transaction.id` deve ser armazenado para futuras consultas e conciliacao.
 
 ## 3. Consultar pagamento
 
@@ -72,77 +78,59 @@ Resposta (exemplo pago):
 ```json
 {
   "ok": true,
-  "status": "paid",
-  "method": "pix",
-  "transactionId": "tx_94f065",
-  "providerReference": "BKP-9981",
-  "paidAt": "2025-01-02T09:41:03-03:00"
+  "transaction": {
+    "id": "uuid",
+    "status": "paid",
+    "method": "pix",
+    "providerReference": "BKP-9981"
+  }
 }
 ```
 
 ## 4. Webhooks
 
-Configure um endpoint em sua aplicação, por exemplo:
+Configure um endpoint no seu sistema e valide:
 
-```http
-POST /webhooks/payment-status
-```
+1. Assinatura HMAC via `x-*-signature`.
+2. Timestamp (opcional) quando `WEBHOOK_REQUIRE_TIMESTAMP=true`.
 
-O gateway enviará notificações assim que o pagamento for confirmado ou alterado.
-
-Exemplo de payload (PIX confirmado):
+Para PIX, o payload esperado no gateway e:
 
 ```json
 {
-  "event": "PAYMENT_CONFIRMED",
-  "method": "pix",
-  "transactionId": "tx_94f065",
-  "status": "paid",
-  "amount": 129.90,
-  "paidAt": "2025-01-02T09:41:03-03:00",
-  "metadata": {
-    "orderId": "548"
-  }
+  "providerReference": "PIX-1700000000000",
+  "event": "PIX_CONFIRMED"
 }
 ```
 
-O recomendável é que o seu sistema:
+## 5. Cartao via provedor
 
-1. Valide o segredo/assinatura do webhook.
-2. Atualize o status do pedido internamente.
-3. Registre logs de auditoria da notificação.
-
-## 5. Cartão via Provedor Terceiro
-
-Para cartão, recomenda-se:
+Para cartao, recomenda-se:
 
 - Usar um provedor como Stripe, Pagar.me, Iugu ou similar.
-- A sua aplicação pode chamar o gateway com um `paymentMethodToken` (token gerado pelo PSP).
-- O gateway orquestra e registra a transação, sem manipular dados sensíveis do cartão.
+- Enviar `card_hash` quando disponivel (fluxo PCI-friendly).
+- O gateway consolida status e registra a transacao.
 
-Fluxo típico:
-
-1. Cliente preenche cartão em componente seguro do PSP.
-2. PSP retorna um token (ex.: `card_tok_abc123`).
-3. Sua aplicação chama o endpoint do gateway:
+Exemplo:
 
 ```json
 {
   "amount": 200.00,
   "currency": "BRL",
-  "method": "card",
-  "paymentMethodToken": "card_tok_abc123",
+  "capture": false,
+  "card_hash": "card_tok_abc123",
   "metadata": {
     "orderId": "999"
   }
 }
 ```
 
-4. O gateway aciona o PSP, registra a transação e retorna o status consolidado.
+## 6. Boas praticas
 
-## 6. Boas práticas
+- Use `Idempotency-Key` em criacoes para evitar duplicidade.
+- Configure timeouts e retentativas.
+- Implemente logs estruturados com `transactionId` e `x-request-id`.
 
-- Sempre validar SSL/TLS.
-- Utilizar timeouts e retentativas para consumo de API.
-- Implementar logs estruturados (correlationId / transactionId).
-- Configurar alertas para taxas anormais de falha.
+## 7. OpenAPI
+
+O contrato completo esta em `docs/openapi.yaml`.

@@ -39,7 +39,7 @@ function handleError(res, err) {
   if (isAppError(err)) {
     return sendError(res, err.statusCode, err.message, err.code);
   }
-  logger.error("Unexpected error", err);
+  logger.error({ err }, "Unexpected error");
   return sendError(res, 500, "Erro interno.", "internal_error");
 }
 

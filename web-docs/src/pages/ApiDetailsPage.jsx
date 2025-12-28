@@ -64,7 +64,7 @@ const WEBHOOK_PIX_RESPONSE = `{
 const ENDPOINT_SECTIONS = [
   {
     title: "Criação de pagamentos",
-    description: "Crie PIX ou cartão e receba a transação completa.",
+    description: "Crie PIX ou cartão e receba a transação completa (x-api-key obrigatório).",
     endpoints: [
       {
         method: "POST",
@@ -231,6 +231,7 @@ const ENDPOINT_SECTIONS = [
         response: WEBHOOK_PIX_RESPONSE,
         notes: [
           "Headers: x-pix-signature ou x-webhook-signature.",
+          "Timestamp opcional: x-webhook-timestamp para reduzir replay.",
           "Eventos: PIX_CONFIRMED, PIX_FAILED, PIX_EXPIRED."
         ]
       },
@@ -265,7 +266,7 @@ export function ApiDetailsPage() {
           <span className="eyebrow">API Reference</span>
           <h1>Detalhes completos dos endpoints.</h1>
           <p className="lead">
-            Requests e responses reais da API de pagamentos em produção local.
+            Requests e responses reais da API de pagamentos com autenticacao por API key.
           </p>
           <div className="hero-actions">
             <Link className="button ghost" to="/api">
@@ -286,6 +287,8 @@ export function ApiDetailsPage() {
           <div className="panel-card">
             <div className="panel-title">Cabeçalhos</div>
             <p className="panel-text">
+              x-api-key e Authorization: Bearer sao obrigatorios em /payments.
+              <br />
               Idempotency-Key e x-request-id estão disponíveis em todas as
               respostas.
             </p>

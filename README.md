@@ -1,28 +1,29 @@
-# Gateway de Pagamentos – Documentação e Portal
+# Gateway de Pagamentos - Documentacao e Portal
 
-Este repositório contém:
+Este repositorio contem:
 
-- Portal de documentação em **React + Vite** (web-docs/)
+- Portal de documentacao em **React + Vite** (`web-docs/`)
 - Documentos de apoio para **investidores**
-- Manual de **integração técnica** (API e webhooks)
-- Script `.bat` para facilitar o setup em Windows (instalar dependências e abrir o VS Code)
+- Manual de **integracao tecnica** (API e webhooks)
+- Script `.bat` para facilitar o setup no Windows (instalar dependencias e abrir o VS Code)
 
 Foco do gateway:
 
-- **PIX** como método principal de pagamento e liquidação
-- **Cartão de crédito** via provedores terceiros (Stripe, Pagar.me, Iugu, Stone, etc.)
+- **PIX** como metodo principal de pagamento e liquidacao
+- **Cartao de credito** via provedores terceiros (Stripe, Pagar.me, Iugu, Stone, etc.)
 
 ## Estrutura
 
-- `web-docs/` – SPA em React/Vite para documentação
-- `docs/` – Documentos em Markdown (Investidores, Roadmap, Integração)
-- `scripts/setup-dev.bat` – Script para preparar ambiente local rapidamente
+- `web-docs/` - SPA em React/Vite para documentacao
+- `docs/` - Documentos em Markdown (Investidores, Roadmap, Integracao)
+- `docs/openapi.yaml` - Contrato OpenAPI da API de pagamentos
+- `scripts/setup-dev.bat` - Script para preparar ambiente local rapidamente
 
-## Pré-requisitos
+## Pre-requisitos
 
 - Node.js LTS instalado
 - Git (opcional, mas recomendado)
-- Visual Studio Code instalado e disponível no PATH (`code`)
+- Visual Studio Code instalado e disponivel no PATH (`code`)
 
 ## Como usar rapidamente
 
@@ -36,4 +37,4 @@ Foco do gateway:
    npm run dev
    ```
 
-3. Acesse no navegador o endereço exibido (por padrão: `http://localhost:5173`).
+3. Acesse no navegador o endereco exibido (por padrao: `http://localhost:5173`).

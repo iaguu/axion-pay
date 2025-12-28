@@ -1,5 +1,90 @@
-const transactions = new Map();
-const idempotencyIndex = new Map();
+import { db } from "./db.js";
+
+const insertTransactionStmt = db.prepare(`
+  INSERT INTO transactions (
+    id,
+    amount,
+    amount_cents,
+    currency,
+    method,
+    status,
+    capture,
+    customer,
+    customer_id,
+    provider,
+    provider_reference,
+    method_details,
+    metadata,
+    created_at,
+    updated_at
+  ) VALUES (
+    @id,
+    @amount,
+    @amount_cents,
+    @currency,
+    @method,
+    @status,
+    @capture,
+    @customer,
+    @customer_id,
+    @provider,
+    @provider_reference,
+    @method_details,
+    @metadata,
+    @created_at,
+    @updated_at
+  )
+`);
+
+const updateTransactionStmt = db.prepare(`
+  UPDATE transactions SET
+    amount = @amount,
+    amount_cents = @amount_cents,
+    currency = @currency,
+    method = @method,
+    status = @status,
+    capture = @capture,
+    customer = @customer,
+    customer_id = @customer_id,
+    provider = @provider,
+    provider_reference = @provider_reference,
+    method_details = @method_details,
+    metadata = @metadata,
+    updated_at = @updated_at
+  WHERE id = @id
+`);
+
+const selectTransactionStmt = db.prepare("SELECT * FROM transactions WHERE id = ?");
+const selectEventsStmt = db.prepare(
+  "SELECT type, at, details FROM transaction_events WHERE transaction_id = ? ORDER BY id"
+);
+const insertEventStmt = db.prepare(
+  "INSERT INTO transaction_events (transaction_id, type, at, details) VALUES (?, ?, ?, ?)"
+);
+const updateUpdatedAtStmt = db.prepare("UPDATE transactions SET updated_at = ? WHERE id = ?");
+const selectByProviderReferenceStmt = db.prepare(
+  "SELECT * FROM transactions WHERE provider_reference = ? LIMIT 1"
+);
+const selectIdempotencyStmt = db.prepare(
+  "SELECT transaction_id FROM idempotency_keys WHERE key = ? LIMIT 1"
+);
+const upsertIdempotencyStmt = db.prepare(
+  "INSERT OR REPLACE INTO idempotency_keys (key, transaction_id, created_at) VALUES (?, ?, ?)"
+);
+
+function safeParseJson(value, fallback) {
+  if (value === null || value === undefined || value === "") return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function toJson(value) {
+  if (value === null || value === undefined) return null;
+  return JSON.stringify(value);
+}
 
 function buildEvent(type, details = {}) {
   return {
@@ -7,6 +92,45 @@ function buildEvent(type, details = {}) {
     at: new Date().toISOString(),
     ...details
   };
+}
+
+function mapEventRows(rows) {
+  return rows.map((row) => ({
+    type: row.type,
+    at: row.at,
+    ...(safeParseJson(row.details, {}) || {})
+  }));
+}
+
+function rowToTransaction(row, events = []) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    amount: row.amount,
+    amount_cents: row.amount_cents,
+    currency: row.currency,
+    method: row.method,
+    status: row.status,
+    customer: safeParseJson(row.customer, null),
+    provider: row.provider,
+    providerReference: row.provider_reference,
+    methodDetails: safeParseJson(row.method_details, null),
+    capture: Boolean(row.capture),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    metadata: safeParseJson(row.metadata, {}),
+    events
+  };
+}
+
+function loadTransactionWithEvents(row) {
+  if (!row) return null;
+  const events = mapEventRows(selectEventsStmt.all(row.id));
+  return rowToTransaction(row, events);
+}
+
+function pickValue(partial, existing, key) {
+  return Object.prototype.hasOwnProperty.call(partial, key) ? partial[key] : existing[key];
 }
 
 export function createTransaction(data) {
@@ -31,118 +155,194 @@ export function createTransaction(data) {
     metadata: data.metadata || {},
     events: [buildEvent("created", { status: "pending" })]
   };
-  transactions.set(tx.id, tx);
+
+  const insertTx = db.transaction(() => {
+    insertTransactionStmt.run({
+      id: tx.id,
+      amount: tx.amount,
+      amount_cents: tx.amount_cents,
+      currency: tx.currency,
+      method: tx.method,
+      status: tx.status,
+      capture: tx.capture ? 1 : 0,
+      customer: toJson(tx.customer),
+      customer_id: tx.customer?.id ? String(tx.customer.id) : null,
+      provider: tx.provider,
+      provider_reference: tx.providerReference,
+      method_details: toJson(tx.methodDetails),
+      metadata: toJson(tx.metadata),
+      created_at: tx.createdAt,
+      updated_at: tx.updatedAt
+    });
+    insertEventStmt.run(tx.id, "created", tx.createdAt, toJson({ status: "pending" }));
+  });
+
+  insertTx();
   return tx;
 }
 
 export function updateTransaction(id, partial) {
-  const existing = transactions.get(id);
-  if (!existing) return null;
-  let events = existing.events || [];
-  if (partial.status && partial.status !== existing.status) {
-    events = events.concat(
-      buildEvent("status_changed", {
-        from: existing.status,
-        to: partial.status
-      })
-    );
-  }
+  const row = selectTransactionStmt.get(id);
+  if (!row) return null;
+  const existing = loadTransactionWithEvents(row);
+  const nextStatus = pickValue(partial, existing, "status");
+  const updatedAt = new Date().toISOString();
   const updated = {
     ...existing,
-    ...partial,
-    updatedAt: new Date().toISOString(),
-    events
+    amount: pickValue(partial, existing, "amount"),
+    amount_cents: pickValue(partial, existing, "amount_cents"),
+    currency: pickValue(partial, existing, "currency"),
+    method: pickValue(partial, existing, "method"),
+    status: nextStatus,
+    customer: pickValue(partial, existing, "customer"),
+    provider: pickValue(partial, existing, "provider"),
+    providerReference: pickValue(partial, existing, "providerReference"),
+    methodDetails: pickValue(partial, existing, "methodDetails"),
+    capture: pickValue(partial, existing, "capture"),
+    metadata: pickValue(partial, existing, "metadata"),
+    updatedAt
   };
-  transactions.set(id, updated);
-  return updated;
+
+  const updateTx = db.transaction(() => {
+    updateTransactionStmt.run({
+      id: updated.id,
+      amount: updated.amount,
+      amount_cents: updated.amount_cents,
+      currency: updated.currency,
+      method: updated.method,
+      status: updated.status,
+      capture: updated.capture ? 1 : 0,
+      customer: toJson(updated.customer),
+      customer_id: updated.customer?.id ? String(updated.customer.id) : null,
+      provider: updated.provider,
+      provider_reference: updated.providerReference,
+      method_details: toJson(updated.methodDetails),
+      metadata: toJson(updated.metadata),
+      updated_at: updated.updatedAt
+    });
+
+    if (partial.status && partial.status !== existing.status) {
+      insertEventStmt.run(
+        updated.id,
+        "status_changed",
+        updated.updatedAt,
+        toJson({ from: existing.status, to: partial.status })
+      );
+    }
+  });
+
+  updateTx();
+  return loadTransactionWithEvents(selectTransactionStmt.get(id));
 }
 
 export function getTransaction(id) {
-  return transactions.get(id) || null;
+  const row = selectTransactionStmt.get(id);
+  return loadTransactionWithEvents(row);
 }
 
 export function listTransactions({ status, method, provider, customerId, from, to } = {}) {
-  let list = Array.from(transactions.values());
+  const where = [];
+  const params = [];
 
   if (status) {
-    const statusValue = String(status);
-    list = list.filter((tx) => tx.status === statusValue);
+    where.push("status = ?");
+    params.push(String(status));
   }
   if (method) {
-    const methodValue = String(method);
-    list = list.filter((tx) => tx.method === methodValue);
+    where.push("method = ?");
+    params.push(String(method));
   }
   if (provider) {
-    list = list.filter((tx) => tx.provider === provider);
+    where.push("provider = ?");
+    params.push(provider);
   }
   if (customerId) {
-    list = list.filter((tx) => String(tx.customer?.id || "") === String(customerId));
+    where.push("customer_id = ?");
+    params.push(String(customerId));
   }
   if (from) {
-    const fromDate = new Date(from).getTime();
-    if (!Number.isNaN(fromDate)) {
-      list = list.filter((tx) => new Date(tx.createdAt).getTime() >= fromDate);
+    const fromDate = new Date(from).toISOString();
+    if (fromDate !== "Invalid Date") {
+      where.push("created_at >= ?");
+      params.push(fromDate);
     }
   }
   if (to) {
-    const toDate = new Date(to).getTime();
-    if (!Number.isNaN(toDate)) {
-      list = list.filter((tx) => new Date(tx.createdAt).getTime() <= toDate);
+    const toDate = new Date(to).toISOString();
+    if (toDate !== "Invalid Date") {
+      where.push("created_at <= ?");
+      params.push(toDate);
     }
   }
 
-  return list;
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const rows = db
+    .prepare(`SELECT * FROM transactions ${whereClause} ORDER BY created_at DESC`)
+    .all(...params);
+
+  return rows.map((row) => loadTransactionWithEvents(row));
 }
 
 export function findTransactionByProviderReference(providerReference) {
   const reference = String(providerReference || "");
-  return Array.from(transactions.values()).find((tx) => tx.providerReference === reference) || null;
+  const row = selectByProviderReferenceStmt.get(reference);
+  return loadTransactionWithEvents(row);
 }
 
 export function getTransactionEvents(id) {
-  const tx = transactions.get(id);
-  return tx ? tx.events || [] : null;
+  const row = selectTransactionStmt.get(id);
+  if (!row) return null;
+  return mapEventRows(selectEventsStmt.all(id));
 }
 
 export function appendEvent(id, event) {
-  const existing = transactions.get(id);
-  if (!existing) return null;
+  const row = selectTransactionStmt.get(id);
+  if (!row) return null;
   const nextEvent = {
     ...event,
     at: new Date().toISOString()
   };
-  const updated = {
-    ...existing,
-    events: (existing.events || []).concat(nextEvent),
-    updatedAt: new Date().toISOString()
-  };
-  transactions.set(id, updated);
-  return updated;
+  const { type, at, ...details } = nextEvent;
+  insertEventStmt.run(id, type, at, toJson(details));
+  updateUpdatedAtStmt.run(nextEvent.at, id);
+  return loadTransactionWithEvents(selectTransactionStmt.get(id));
 }
 
 export function mergeTransactionMetadata(id, metadata) {
-  const existing = transactions.get(id);
+  const existing = getTransaction(id);
   if (!existing) return null;
-  const updated = {
-    ...existing,
-    metadata: {
-      ...existing.metadata,
-      ...metadata
-    },
-    updatedAt: new Date().toISOString()
+  const updatedAt = new Date().toISOString();
+  const updatedMetadata = {
+    ...(existing.metadata || {}),
+    ...metadata
   };
-  transactions.set(id, updated);
-  return updated;
+  updateTransactionStmt.run({
+    id: existing.id,
+    amount: existing.amount,
+    amount_cents: existing.amount_cents,
+    currency: existing.currency,
+    method: existing.method,
+    status: existing.status,
+    capture: existing.capture ? 1 : 0,
+    customer: toJson(existing.customer),
+    customer_id: existing.customer?.id ? String(existing.customer.id) : null,
+    provider: existing.provider,
+    provider_reference: existing.providerReference,
+    method_details: toJson(existing.methodDetails),
+    metadata: toJson(updatedMetadata),
+    updated_at: updatedAt
+  });
+  return loadTransactionWithEvents(selectTransactionStmt.get(id));
 }
 
 export function setIdempotencyKey(key, transactionId) {
   if (!key || !transactionId) return;
-  idempotencyIndex.set(String(key), transactionId);
+  upsertIdempotencyStmt.run(String(key), transactionId, new Date().toISOString());
 }
 
 export function getTransactionByIdempotencyKey(key) {
   if (!key) return null;
-  const transactionId = idempotencyIndex.get(String(key));
-  if (!transactionId) return null;
-  return transactions.get(transactionId) || null;
+  const row = selectIdempotencyStmt.get(String(key));
+  if (!row) return null;
+  return getTransaction(row.transaction_id);
 }

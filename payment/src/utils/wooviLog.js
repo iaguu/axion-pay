@@ -1,14 +1,24 @@
 import fs from "fs";
 import path from "path";
 import { redactSensitiveFields } from "./redact.js";
+import { config } from "../config/env.js";
+import { logger } from "./logger.js";
 
-const LOG_PATH = process.env.WOOVI_LOG_PATH
-  ? path.resolve(process.cwd(), process.env.WOOVI_LOG_PATH)
-  : path.resolve(process.cwd(), "woovi-log.txt");
+const LOG_PATH = config.logging.wooviLogPath;
+let logReady = false;
+
+async function ensureLogDir() {
+  if (logReady) return;
+  const dir = path.dirname(LOG_PATH);
+  await fs.promises.mkdir(dir, { recursive: true });
+  logReady = true;
+}
 
 function appendLine(payload) {
-  const line = JSON.stringify(payload, null, 2);
-  fs.appendFileSync(LOG_PATH, `${line}\n\n`, "utf8");
+  const line = JSON.stringify(payload);
+  ensureLogDir()
+    .then(() => fs.promises.appendFile(LOG_PATH, `${line}\n`, "utf8"))
+    .catch((err) => logger.warn({ err }, "Falha ao gravar log Woovi."));
 }
 
 export function logWooviResponse({

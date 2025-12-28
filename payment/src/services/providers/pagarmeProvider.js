@@ -25,7 +25,7 @@ export async function createCardTransactionWithPagarme({
 
   // Se nao houver API key, simulamos a transacao (modo mock).
   if (!apiKey) {
-    logger.warn("Pagar.me API KEY nao configurada. Usando modo MOCK para cartao.");
+    logger.warn("Pagar.me API key nao configurada. Usando modo mock para cartao.");
     const ref = "PGRMOCK-" + Date.now();
     const status = capture === false ? "authorized" : "paid";
     return {
@@ -93,7 +93,7 @@ export async function createCardTransactionWithPagarme({
       payload.card_cvv = card.cvv;
     }
 
-    logger.info("Enviando transacao para Pagar.me", { amountCents });
+    logger.info({ amountCents }, "Enviando transacao para Pagar.me");
 
     const response = await client.post("/transactions", payload);
 
@@ -112,7 +112,10 @@ export async function createCardTransactionWithPagarme({
       raw: data
     };
   } catch (err) {
-    logger.error("Erro ao criar transacao na Pagar.me", err?.response?.data || err.message);
+    logger.error(
+      { err: err?.response?.data || err?.message },
+      "Erro ao criar transacao na Pagar.me"
+    );
     return {
       success: false,
       status: "failed",

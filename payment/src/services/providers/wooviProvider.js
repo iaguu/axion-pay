@@ -170,7 +170,7 @@ export async function createPixCharge({ amount, amount_cents, currency, customer
   const startedAt = Date.now();
   try {
     const payload = buildPixPayload({ amount_cents: amountCents, currency, customer, metadata });
-    logger.info("Enviando cobranca PIX para Woovi", { amount_cents: amountCents });
+    logger.info({ amount_cents: amountCents }, "Enviando cobranca PIX para Woovi");
     const response = await client.post(config.woovi.pixPath, payload);
     const data = response.data || {};
     const status = mapStatus(data.status || data.charge?.status);
@@ -202,7 +202,10 @@ export async function createPixCharge({ amount, amount_cents, currency, customer
       durationMs: Date.now() - startedAt,
       error: err?.response?.data || err.message
     });
-    logger.error("Erro ao criar cobranca PIX na Woovi", err?.response?.data || err.message);
+    logger.error(
+      { err: err?.response?.data || err?.message },
+      "Erro ao criar cobranca PIX na Woovi"
+    );
     return {
       success: false,
       status: "failed",
@@ -268,7 +271,10 @@ export async function confirmPixPayment(providerReference) {
       durationMs: Date.now() - startedAt,
       error: err?.response?.data || err.message
     });
-    logger.error("Erro ao confirmar PIX na Woovi", err?.response?.data || err.message);
+    logger.error(
+      { err: err?.response?.data || err?.message },
+      "Erro ao confirmar PIX na Woovi"
+    );
     return {
       success: false,
       status: "failed",
@@ -312,7 +318,7 @@ export async function createCardTransactionWithWoovi({
       card_hash,
       metadata
     });
-    logger.info("Enviando transacao de cartao para Woovi", { amount_cents: amountCents });
+    logger.info({ amount_cents: amountCents }, "Enviando transacao de cartao para Woovi");
     const response = await client.post(config.woovi.cardPath, payload);
     const data = response.data || {};
     const status = mapStatus(data.status || data.transaction?.status);
@@ -344,7 +350,10 @@ export async function createCardTransactionWithWoovi({
       durationMs: Date.now() - startedAt,
       error: err?.response?.data || err.message
     });
-    logger.error("Erro ao criar transacao de cartao na Woovi", err?.response?.data || err.message);
+    logger.error(
+      { err: err?.response?.data || err?.message },
+      "Erro ao criar transacao de cartao na Woovi"
+    );
     return {
       success: false,
       status: "failed",

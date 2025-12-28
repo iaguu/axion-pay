@@ -5,7 +5,7 @@ Este repositorio contem um prototipo de API de pagamentos em **Node.js + Express
 - Criacao de cobrancas **PIX** (mock, pronto para plugar em PSP/banco);
 - Criacao de pagamentos de **Cartao** usando Woovi;
 - Webhooks para atualizacao de status;
-- Store em memoria para testes rapidos;
+- Persistencia local via SQLite (arquivo `data/payment.db`);
 - Lista de PSPs e bancos sugeridos para producao.
 
 > Atencao: este codigo e um **prototipo**. Nao esta pronto para producao e nao substitui PCI-DSS, LGPD ou homologacao bancaria.
@@ -15,7 +15,8 @@ Este repositorio contem um prototipo de API de pagamentos em **Node.js + Express
 - `src/server.js` - bootstrap do Express
 - `src/config/env.js` - variaveis de ambiente
 - `src/utils/` - logger, validacoes e seguranca
-- `src/models/transactionStore.js` - armazenamento em memoria
+- `src/models/db.js` - conexao SQLite
+- `src/models/transactionStore.js` - persistencia de transacoes
 - `src/services/` - orquestracao e providers (Pagar.me, PIX)
 - `src/controllers/` - controllers HTTP
 - `src/routes/` - rotas da API
@@ -48,16 +49,38 @@ Este repositorio contem um prototipo de API de pagamentos em **Node.js + Express
 
 4. A API sobe em `http://localhost:3000`.
 
+> Autenticacao: use `API_KEY` e `AUTH_REQUIRED=true` para exigir `x-api-key` ou `Authorization: Bearer` nas rotas `/payments`.
+
 ## Testes automatizados
 
 ```bash
 npm test
 ```
 
+Para teste de integracao com Woovi (opcional):
+
+```bash
+npm run test:integration
+```
+
+Requer `WOOVI_API_KEY`, `WOOVI_BASE_URL` e `WOOVI_PIX_PATH`. O teste de webhook
+PIX so roda se `WOOVI_PIX_CONFIRM_PATH` estiver configurado.
+
 ## Variaveis de ambiente
 
 - `PORT`
 - `NODE_ENV`
+- `TRUST_PROXY`
+- `API_KEY`
+- `AUTH_REQUIRED`
+- `CORS_ORIGINS`
+- `CORS_CREDENTIALS`
+- `RATE_LIMIT_WINDOW_MS`
+- `RATE_LIMIT_MAX`
+- `LOG_LEVEL`
+- `LOG_PRETTY`
+- `WOOVI_LOG_PATH`
+- `DB_PATH`
 - `PAGARME_API_KEY`
 - `PAGARME_BASE_URL`
 - `WOOVI_API_KEY`
@@ -70,6 +93,8 @@ npm test
 - `PIX_WEBHOOK_SECRET`
 - `PAGARME_WEBHOOK_SECRET`
 - `WOOVI_WEBHOOK_SECRET`
+- `WEBHOOK_REQUIRE_TIMESTAMP`
+- `WEBHOOK_TOLERANCE_SECONDS`
 - `JSON_BODY_LIMIT`
 
 Observacao: variaveis `PAGARME_*` sao legadas e nao sao usadas pelo fluxo Woovi.
@@ -77,6 +102,10 @@ Observacao: variaveis `PAGARME_*` sao legadas e nao sao usadas pelo fluxo Woovi.
 Se `WOOVI_AUTH_HEADER` nao for definido, o sistema usa `WOOVI_API_KEY` diretamente no header `Authorization`.
 
 Carregamento de envs: `.env` sempre e lido e, se existir, `.env.<NODE_ENV>` sobrescreve os valores do `.env`.
+
+## OpenAPI
+
+O contrato completo esta em `docs/openapi.yaml`.
 
 ## Endpoints principais
 
@@ -121,5 +150,6 @@ Carregamento de envs: `.env` sempre e lido e, se existir, `.env.<NODE_ENV>` sobr
 ## Notas de seguranca
 
 - Configure `PIX_WEBHOOK_SECRET` e `WOOVI_WEBHOOK_SECRET` para validar assinaturas de webhook.
+- Para reduzir replay, habilite `WEBHOOK_REQUIRE_TIMESTAMP=true` e ajuste `WEBHOOK_TOLERANCE_SECONDS`.
 - Use `Idempotency-Key` nos requests de criacao para evitar duplicidade.
 - Dados sensiveis (cartao/CPF) sao mascarados antes de persistir em metadata.

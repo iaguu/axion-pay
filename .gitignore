@@ -6,6 +6,10 @@
 **/build/
 **/out/
 **/.vite/
+**/data/
+**/*.db
+**/*.sqlite
+**/*.sqlite3
 
 # Logs
 logs/
