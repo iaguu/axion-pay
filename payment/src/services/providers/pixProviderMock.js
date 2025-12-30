@@ -1,90 +1,37 @@
-import { config } from "../../config/env.js";
-import { logger } from "../../utils/logger.js";
-import { buildPixPayloadData } from "../../utils/pixPayload.js";
 
-function resolvePixConfig() {
-  const missing = [];
-  if (!config.pix?.key) missing.push("PIX_KEY");
-  if (!config.pix?.merchantName) missing.push("PIX_MERCHANT_NAME");
-  if (!config.pix?.merchantCity) missing.push("PIX_MERCHANT_CITY");
-  if (missing.length > 0) {
-    return {
-      ok: false,
-      error: `Config PIX incompleta: ${missing.join(", ")}`
-    };
-  }
-  return {
-    ok: true,
-    key: config.pix.key,
-    merchantName: config.pix.merchantName,
-    merchantCity: config.pix.merchantCity,
-    description: config.pix.description,
-    txid: config.pix.txid || "***"
-  };
-}
+import { generatePixPayload } from '../../utils/pixPayload.js';
 
-/**
- * Provedor mock de PIX. Aqui voce pluga futuramente um banco/PSP real.
- */
-export async function createPixCharge({ amount, amount_cents, currency, metadata }) {
-  const amountCents = Number.isInteger(amount_cents)
-    ? amount_cents
-    : Math.round((amount || 0) * 100);
-  const metadataKeys = metadata && typeof metadata === "object" ? Object.keys(metadata) : [];
-  logger.info(
-    { amount_cents: amountCents, currency, metadataKeys },
-    "Criando cobranca PIX (mock)"
-  );
+// Dados fixos para simulação
+const MOCK_PIX_KEY = '38209847805';
+const MOCK_MERCHANT_NAME = 'AXIONPAY';
+const MOCK_MERCHANT_CITY = 'SAO PAULO';
 
-  const pixConfig = resolvePixConfig();
-  if (!pixConfig.ok) {
-    return {
-      success: false,
-      status: "failed",
-      error: pixConfig.error
-    };
-  }
-
-  const reference = String(metadata?.transactionId || `PIX-${Date.now()}`);
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-  const txid = metadata?.txid || metadata?.transactionId || pixConfig.txid || "***";
-  const description =
-    metadata?.description || metadata?.comment || metadata?.order || pixConfig.description || "";
-  const hasAmount = amount !== undefined || amount_cents !== undefined;
-  const amountValue = hasAmount ? (amountCents / 100).toFixed(2) : undefined;
-  const payloadData = buildPixPayloadData({
-    pixKey: pixConfig.key,
-    merchantName: pixConfig.merchantName,
-    merchantCity: pixConfig.merchantCity,
-    amount: amountValue,
+export async function createPixCharge({ amount_cents, amount, currency, customer, metadata }) {
+  // Valor em reais, se não vier, converte de cents
+  const value = amount || (amount_cents ? (amount_cents / 100).toFixed(2) : '1.00');
+  const txid = metadata?.transactionId || 'MOCKTXID123';
+  const description = 'Pagamento Axion';
+  const qrcode = generatePixPayload({
+    pixKey: MOCK_PIX_KEY,
+    merchantName: MOCK_MERCHANT_NAME,
+    merchantCity: MOCK_MERCHANT_CITY,
+    amount: value,
     txid,
-    description: description || undefined
+    description
   });
-
   return {
     success: true,
-    status: "pending",
-    providerReference: reference,
-    provider: "pix-local",
-    raw: {
-      amount_cents: amountCents,
-      currency: currency || "BRL",
-      qrcode: payloadData.payload,
-      copia_colar: payloadData.payload,
-      txid: payloadData.txid,
-      expiresAt
-    }
+    status: 'pending',
+    provider: 'pix-local',
+    providerReference: 'pix-' + Date.now(),
+    raw: { qrcode, copia_colar: qrcode }
   };
 }
 
-export async function confirmPixPayment(providerReference) {
-  logger.info({ providerReference }, "Confirmando pagamento PIX (mock)");
+export async function confirmPixPayment(ref) {
   return {
     success: true,
-    status: "paid",
-    providerReference,
-    raw: {
-      message: "PIX confirmado (mock)"
-    }
+    status: 'paid',
+    raw: { confirmed_at: new Date() }
   };
 }

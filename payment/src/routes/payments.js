@@ -1,63 +1,61 @@
-import { Router } from "express";
-import {
-  createPaymentHandler,
-  createPixPaymentHandler,
-  createCardPaymentHandler,
-  getPaymentHandler,
-  getPaymentEventsHandler,
-  getPaymentByProviderReferenceHandler,
-  listPaymentsHandler,
-  listPaymentsByStatusHandler,
-  listPaymentsByMethodHandler,
-  getPaymentStatsHandler,
-  confirmPixPaymentHandler,
-  capturePaymentHandler,
-  cancelPaymentHandler,
-  refundPaymentHandler,
-  updatePaymentMetadataHandler
-} from "../controllers/paymentController.js";
-import { validate } from "../middlewares/validate.js";
-import {
-  createPaymentSchema,
-  idParamSchema,
-  methodParamSchema,
-  metadataSchema,
-  paginationQuerySchema,
-  providerReferenceParamSchema,
-  refundSchema,
-  statusParamSchema
-} from "../schemas/paymentSchemas.js";
+import express from 'express';
+import { createPayment, getPayment, getPaymentStats } from '../services/paymentService.js';
+import { requirePermission } from '../middlewares/permissions.js';
 
-const router = Router();
+const router = express.Router();
 
-router.post("/pix", validate(createPaymentSchema), createPixPaymentHandler);
-router.post("/card", validate(createPaymentSchema), createCardPaymentHandler);
-router.post("/", validate(createPaymentSchema), createPaymentHandler);
-router.get("/", validate(paginationQuerySchema, "query"), listPaymentsHandler);
-router.get("/stats", getPaymentStatsHandler);
-router.get("/status/:status", validate(statusParamSchema, "params"), listPaymentsByStatusHandler);
-router.get("/method/:method", validate(methodParamSchema, "params"), listPaymentsByMethodHandler);
-router.get(
-  "/provider/:providerReference",
-  validate(providerReferenceParamSchema, "params"),
-  getPaymentByProviderReferenceHandler
-);
-router.get("/:id/events", validate(idParamSchema, "params"), getPaymentEventsHandler);
-router.get("/:id", validate(idParamSchema, "params"), getPaymentHandler);
-router.post("/:id/confirm", validate(idParamSchema, "params"), confirmPixPaymentHandler);
-router.post("/:id/capture", validate(idParamSchema, "params"), capturePaymentHandler);
-router.post("/:id/cancel", validate(idParamSchema, "params"), cancelPaymentHandler);
-router.post(
-  "/:id/refund",
-  validate(idParamSchema, "params"),
-  validate(refundSchema),
-  refundPaymentHandler
-);
-router.patch(
-  "/:id/metadata",
-  validate(idParamSchema, "params"),
-  validate(metadataSchema),
-  updatePaymentMetadataHandler
-);
+router.post('/pix', requirePermission('pix:create'), async (req, res, next) => {
+  try {
+    const { amount, customer, metadata } = req.body;
+    const result = await createPayment({
+      method: 'pix',
+      amount,
+      amount_cents: Math.round(amount * 100),
+      currency: 'BRL',
+      customer,
+      metadata
+    });
+    res.status(201).json({ ok: true, transaction: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/card', requirePermission('infinitepay:create'), async (req, res, next) => {
+  try {
+    const { amount, amount_cents, customer, card, capture, metadata } = req.body;
+    const idempotencyKey = req.headers['idempotency-key'];
+    
+    const result = await createPayment({
+      method: 'card',
+      amount,
+      amount_cents: amount_cents || (amount ? Math.round(amount * 100) : 0),
+      currency: 'BRL',
+      customer,
+      card,
+      capture,
+      metadata,
+      idempotencyKey
+    });
+    
+    if (result._replayed) {
+      res.set('Idempotency-Status', 'replayed');
+      return res.status(200).json({ ok: true, transaction: result });
+    }
+    
+    if (idempotencyKey) {
+      res.set('Idempotency-Status', 'created');
+    }
+    
+    res.status(201).json({ ok: true, transaction: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/stats', requirePermission('admin:view_transactions'), async (req, res) => {
+  const stats = getPaymentStats();
+  res.json({ ok: true, stats });
+});
 
 export default router;

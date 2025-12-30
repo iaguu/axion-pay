@@ -1,12 +1,8 @@
 export class AppError extends Error {
-  constructor(message, statusCode = 400, code = "bad_request") {
+  constructor(message, statusCode = 500, code = 'internal_error') {
     super(message);
-    this.name = "AppError";
     this.statusCode = statusCode;
     this.code = code;
+    this.isOperational = true;
   }
-}
-
-export function isAppError(err) {
-  return err instanceof AppError;
 }

@@ -288,23 +288,43 @@ const TRANSACTION_SCHEMA = `{
   "events": [{ "type": "created", "status": "pending", "at": "2025-01-05T10:20:30Z" }]
 }`;
 
+
 const PIX_REQUEST = `{
-  "amount": 12.34,
-  "currency": "BRL",
-  "customer": { "id": "cust_1", "name": "Cliente Teste" },
-  "metadata": { "order": "123" }
+  "amount": 10.5,
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@email.com"
+  },
+  "metadata": {
+    "orderId": "123"
+  }
 }`;
 
 const CARD_REQUEST = `{
-  "amount_cents": 9999,
-  "currency": "BRL",
-  "capture": false,
+  "amount": 200.00,
+  "customer": {
+    "name": "Abner Campos",
+    "email": "abner@example.com",
+    "phone_number": "+5511999990000"
+  },
   "card": {
     "number": "4111111111111111",
-    "holder_name": "Cliente 3",
-    "exp_month": 1,
-    "exp_year": 2031,
+    "holder_name": "ABNER CAMPOS",
+    "exp_month": "12",
+    "exp_year": "2028",
     "cvv": "123"
+  },
+  "metadata": {
+    "orderId": "999",
+    "address": {
+      "cep": "02462030",
+      "street": "Rua Caetano Gonçalves",
+      "neighborhood": "Chora Menino",
+      "number": "111",
+      "complement": "Casa 2"
+    },
+    "webhook_url": "https://meusite.com/webhook",
+    "redirect_url": "https://meusite.com/retorno"
   }
 }`;
 

@@ -124,11 +124,10 @@ export function SalesPage() {
     <div className="sales-page">
       <section className="section hero">
         <div className="hero-copy">
-          <span className="eyebrow">AxionPAY Gateway</span>
-          <h1>Pagamentos premium para operações que não podem falhar.</h1>
+          <span className="eyebrow">AxionPAY Fintech</span>
+          <h1>API de pagamentos moderna para negócios digitais.</h1>
           <p className="lead">
-            AxionPAY unifica PIX, cartões e conciliação em uma plataforma única
-            com governança, compliance e experiência premium para o cliente final.
+            Plataforma unificada para PIX instantâneo, cartões, conciliação e webhooks. Design para desenvolvedores, robustez para o financeiro.
           </p>
           <div className="hero-actions">
             <Link className="button primary" to="/api">
@@ -149,10 +148,9 @@ export function SalesPage() {
         </div>
         <div className="hero-panel">
           <div className="panel-card">
-            <div className="panel-title">Monitoramento em tempo real</div>
+            <div className="panel-title">Monitoramento financeiro</div>
             <p className="panel-text">
-              Acompanhe pagamentos, repasses e chargebacks com visão financeira e
-              técnica em um painel unificado.
+              Acompanhe pagamentos, repasses e chargebacks em tempo real, com dashboards e relatórios para o time financeiro.
             </p>
             <div className="panel-status">
               <span className="status-dot ok" />
@@ -160,10 +158,9 @@ export function SalesPage() {
             </div>
           </div>
           <div className="panel-card">
-            <div className="panel-title">Integração em poucas horas</div>
+            <div className="panel-title">Integração expressa</div>
             <p className="panel-text">
-              SDKs, coleção Postman, webhooks testáveis e acompanhamento do time
-              AxionPAY desde o primeiro deploy.
+              SDKs, exemplos de payloads reais, webhooks testáveis e suporte técnico dedicado para acelerar seu go-live.
             </p>
             <Link className="button subtle" to="/api">
               Abrir manual rápido
@@ -175,10 +172,9 @@ export function SalesPage() {
       <section className="section">
         <div className="section-header">
           <span className="eyebrow">Destaques</span>
-          <h2>Velocidade, confiança e controle operacional.</h2>
+          <h2>Velocidade, confiança e controle financeiro.</h2>
           <p>
-            Cada camada do gateway foi desenhada para reduzir falhas, elevar a
-            aprovação e manter governança financeira do início ao fim.
+            Cada camada do AxionPAY foi desenhada para reduzir falhas, elevar conversão e garantir governança financeira ponta a ponta.
           </p>
         </div>
         <div className="card-grid">

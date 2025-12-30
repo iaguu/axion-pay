@@ -13,6 +13,7 @@ import {
 } from "../models/transactionStore.js";
 import { createPixCharge, confirmPixPayment } from "./providers/pixProviderMock.js";
 import { createCardTransactionWithWoovi } from "./providers/wooviProvider.js";
+import { createCardTransactionWithInfinite } from "./providers/infiniteProvider.js";
 import { logger } from "../utils/logger.js";
 import { AppError } from "../utils/errors.js";
 import { buildCardSummary, normalizeMetadata } from "../utils/validation.js";
@@ -36,7 +37,7 @@ export async function createPayment({
   if (idempotencyKey) {
     const existing = getTransactionByIdempotencyKey(idempotencyKey);
     if (existing) {
-      return existing;
+      return { ...existing, _replayed: true };
     }
   }
 
@@ -100,13 +101,8 @@ export async function createPayment({
   }
 
   if (method === "card") {
-    const result = await createCardTransactionWithWoovi({
-      amount,
+    const result = await createCardTransactionWithInfinite({
       amount_cents,
-      currency,
-      capture,
-      card,
-      card_hash,
       customer,
       metadata: mergedMetadata
     });
@@ -114,7 +110,7 @@ export async function createPayment({
     if (result.success) {
       return updateTransaction(id, {
         status: result.status,
-        provider: result.provider || "woovi",
+        provider: result.provider || "infinity",
         providerReference: result.providerReference,
         metadata: {
           ...tx.metadata,
@@ -380,6 +376,46 @@ export async function handleWooviWebhook(payload) {
     metadata: {
       ...tx.metadata,
       providerWebhook: redactSensitiveFields(payload)
+    }
+  });
+}
+
+export async function handleInfinitePayWebhook(payload) {
+  const { id, status, order_nsu, metadata } = payload || {};
+
+  let tx = null;
+  
+  // 1. Tenta buscar pelo ID da transação interna (order_nsu)
+  if (order_nsu) {
+    tx = getTransaction(order_nsu);
+  }
+
+  // 2. Se não achar, tenta pelo ID da InfinitePay (providerReference)
+  if (!tx && id) {
+    tx = findTransactionByProviderReference(id);
+  }
+
+  if (!tx) {
+    logger.warn({ payload }, "Webhook InfinitePay: Transacao nao encontrada");
+    return null;
+  }
+
+  let mappedStatus = tx.status;
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (["paid", "approved", "settled"].includes(normalizedStatus)) {
+    mappedStatus = "paid";
+  } else if (["refused", "failed", "denied"].includes(normalizedStatus)) {
+    mappedStatus = "failed";
+  } else if (["canceled", "voided"].includes(normalizedStatus)) {
+    mappedStatus = "canceled";
+  }
+
+  return updateTransaction(tx.id, {
+    status: mappedStatus,
+    metadata: {
+      ...tx.metadata,
+      infiniteWebhook: redactSensitiveFields(payload)
     }
   });
 }

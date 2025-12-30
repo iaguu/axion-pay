@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "security": {
+    "apiSecret": "axion_key_3c24ad39cacdd0b9dfbb71c32de5c7f5e1ca54b0bac9020e",
+    "allowAnonymous": true,
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 10
+    },
+    "maxTransactionAmount": 10000.00,
+    "requireIdempotencyKey": true,
+    "allowedCurrencies": ["BRL", "USD"]
+  },
+  "gateways": {
+    "infinity_pay": {
+      "enabled": true,
+      "priority": 1
+    },
+    "pix_own": {
+      "enabled": true,
+      "priority": 2
+    },
+    "stripe": {
+      "enabled": false,
+      "priority": 0
+    }
+  }
+}

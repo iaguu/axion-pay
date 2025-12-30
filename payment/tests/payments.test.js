@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import request from "supertest";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll } from "@jest/globals";
 import { logTestEvent, getTestLogPath } from "./testLogger.js";
 
 let app;

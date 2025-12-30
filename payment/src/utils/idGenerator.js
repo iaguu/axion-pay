@@ -1,3 +1,5 @@
-import { v4 as uuid } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 
-export const generateTransactionId = () => uuid();
+export function generateTransactionId() {
+  return uuidv4();
+}

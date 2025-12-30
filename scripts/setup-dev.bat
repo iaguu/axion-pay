@@ -1,47 +1,67 @@
 @echo off
 SETLOCAL ENABLEDELAYEDEXPANSION
 
+:: ==========================================
+:: CONFIGURACAO (LOW CODE)
+:: ==========================================
+set "TARGET_FOLDER=web-docs"
+set "INSTALL_CMD=npm install"
+set "START_CMD=npm run dev"
+set "EDITOR_CMD=code"
+
 echo ===========================================
-echo  Setup do Portal de Documentacao do Gateway
+echo  Setup do Portal: %TARGET_FOLDER%
 echo ===========================================
 echo.
 
-REM Descobre o caminho absoluto da pasta do script
-set SCRIPT_DIR=%~dp0
-REM Sobe um nivel para chegar na raiz do repositorio
+:: 1. Validacao de Ambiente (Seguranca/Prerequisitos)
+where node >nul 2>nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERRO] Node.js nao encontrado. Por favor instale o Node.js.
+    pause
+    EXIT /B 1
+)
+
+:: 2. Navegacao Segura
+set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%\.."
+set "PROJECT_ROOT=%CD%"
+set "TARGET_PATH=%PROJECT_ROOT%\%TARGET_FOLDER%"
 
-set PROJECT_DIR=%CD%\web-docs
-
-echo Pasta do projeto: %PROJECT_DIR%
-echo.
-
-IF NOT EXIST "%PROJECT_DIR%" (
-  echo ERRO: Pasta web-docs nao encontrada.
+if not exist "%TARGET_PATH%" (
+  echo [ERRO] Pasta alvo nao encontrada: %TARGET_PATH%
   pause
   EXIT /B 1
 )
 
-cd /d "%PROJECT_DIR%"
+cd /d "%TARGET_PATH%"
+echo Diretorio atual: %CD%
 
-echo Instalando dependencias com npm install...
-call npm install
+:: 3. Execucao de Comandos
+echo.
+echo Executando instalacao...
+call %INSTALL_CMD%
 
 IF %ERRORLEVEL% NEQ 0 (
-  echo.
-  echo ERRO ao executar npm install. Verifique se o Node.js esta instalado.
+  echo [ERRO] Falha na instalacao.
   pause
   EXIT /B 1
 )
 
-echo.
-echo Abrindo Visual Studio Code...
-code .
+:: 4. Abertura do Editor (Opcional)
+where %EDITOR_CMD% >nul 2>nul
+if %ERRORLEVEL% EQU 0 (
+    echo Abrindo editor...
+    call %EDITOR_CMD% .
+) else (
+    echo Editor '%EDITOR_CMD%' nao encontrado no PATH. Pulando abertura.
+)
 
 echo.
-echo Setup concluido.
-echo Para iniciar o servidor de desenvolvimento, execute:
-echo   npm run dev
+echo ===========================================
+echo  Setup Concluido com Sucesso
+echo  Para iniciar, execute: %START_CMD%
+echo ===========================================
 echo.
 pause
 ENDLOCAL

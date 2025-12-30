@@ -71,22 +71,21 @@ export function StatusPage() {
     <div className="status-page">
       <section className="section hero compact">
         <div className="hero-copy">
-          <span className="eyebrow">Status da API</span>
-          <h1>Visibilidade total da operação em tempo real.</h1>
+          <span className="eyebrow">Status AxionPAY</span>
+          <h1>Transparência e confiança para o seu financeiro.</h1>
           <p className="lead">
-            Consulte disponibilidade, incidentes e janelas de manutenção do
-            AxionPAY em um único painel.
+            Veja a disponibilidade, incidentes e manutenções da plataforma em tempo real. Monitoramento pensado para fintechs e operações críticas.
           </p>
           <div className="hero-status">
             <span className="status-dot ok" />
-            <span className="hero-status-text">Todos os sistemas operacionais</span>
+            <span className="hero-status-text">Todos os sistemas operando normalmente</span>
           </div>
         </div>
         <div className="hero-panel">
           <div className="panel-card">
-            <div className="panel-title">Alertas proativos</div>
+            <div className="panel-title">Alertas inteligentes</div>
             <p className="panel-text">
-              Receba notificações por e-mail, Slack ou webhook dedicado.
+              Notificações automáticas por e-mail, Slack ou webhook para seu time de tecnologia e financeiro.
             </p>
             <Link className="button subtle" to="/cadastro">
               Assinar atualizações

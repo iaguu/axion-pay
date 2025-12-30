@@ -1,93 +1,28 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import pinoHttp from "pino-http";
-import { v4 as uuid } from "uuid";
-import { config } from "./config/env.js";
-import paymentsRouter from "./routes/payments.js";
-import webhooksRouter from "./routes/webhooks.js";
-import authRouter from "./routes/auth.js";
-import accountRouter from "./routes/account.js";
-import adminRouter from "./routes/admin.js";
-import { requireApiKey } from "./middlewares/auth.js";
-import { errorHandler, notFoundHandler } from "./middlewares/errors.js";
-import { logger } from "./utils/logger.js";
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config/env.js';
+import paymentRoutes from './routes/payments.js';
+import webhookRoutes from './routes/webhooks.js';
+import adminRoutes from './routes/admin.js';
+import { logger } from './utils/logger.js';
 
-const app = express();
-
-app.disable("x-powered-by");
-app.set("trust proxy", config.trustProxy);
-
-app.use(
-  cors({
-    origin:
-      config.cors.origins === "*"
-        ? true
-        : config.cors.origins.length
-          ? config.cors.origins
-          : false,
-    credentials: config.cors.credentials
-  })
-);
+export const app = express();
 
 app.use(helmet());
+app.use(cors({ origin: '*' }));
+app.use(express.json());
 
-app.use(
-  rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    max: config.rateLimit.max,
-    standardHeaders: "draft-7",
-    legacyHeaders: false
-  })
-);
-
-app.use((req, res, next) => {
-  const requestId = req.get("x-request-id") || uuid();
-  req.requestId = requestId;
-  req.id = requestId;
-  res.set("x-request-id", requestId);
-  next();
+app.get('/health', (req, res) => {
+  res.json({ ok: true, status: 'UP' });
 });
 
-app.use(
-  express.json({
-    limit: config.limits.jsonBody,
-    verify: (req, _res, buf) => {
-      req.rawBody = buf.toString("utf8");
-    }
-  })
-);
+app.use('/payments', paymentRoutes);
+app.use('/webhooks', webhookRoutes);
+app.use('/admin', adminRoutes);
 
-app.use(
-  pinoHttp({
-    logger,
-    customProps: (req) => ({ requestId: req.requestId }),
-    customSuccessMessage: (req, res) =>
-      `${req.method} ${req.url} ${res.statusCode} ${res.responseTime}ms`,
-    customErrorMessage: (req, res, err) =>
-      `${req.method} ${req.url} ${res.statusCode} ${res.responseTime}ms - ${
-        err?.message || "error"
-      }`
-  })
-);
-
-app.get("/health", (_req, res) => {
-  res.json({
-    ok: true,
-    status: "UP",
-    env: config.env,
-    uptime: process.uptime()
-  });
+app.use((err, req, res, next) => {
+  logger.error(err);
+  const status = err.statusCode || 500;
+  res.status(status).json({ ok: false, error: err.message });
 });
-
-app.use("/auth", authRouter);
-app.use("/account", accountRouter);
-app.use("/admin", adminRouter);
-app.use("/payments", requireApiKey, paymentsRouter);
-app.use("/webhooks", webhooksRouter);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-export { app };

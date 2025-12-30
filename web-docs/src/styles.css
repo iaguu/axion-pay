@@ -1,17 +1,19 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap");
 
+
 :root {
-  --bg: #f6f4f1;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --surface-muted: #f1ede7;
-  --ink: #0f1115;
+  --surface-muted: #eaf1f8;
+  --ink: #1a222c;
   --ink-soft: #4b515c;
-  --accent: #0f766e;
+  --accent: #0ea47a;
   --accent-dark: #0b4f4a;
-  --gold: #c6a157;
-  --border: #e2dbcf;
-  --shadow: 0 30px 60px rgba(16, 17, 20, 0.08);
-  --shadow-soft: 0 18px 40px rgba(16, 17, 20, 0.06);
+  --gold: #e6b800;
+  --border: #dbeafe;
+  --shadow: 0 30px 60px rgba(16, 17, 20, 0.10);
+  --shadow-soft: 0 18px 40px rgba(16, 17, 20, 0.08);
+  --modern-gradient: linear-gradient(120deg, #0ea47a 0%, #0f766e 60%, #e6b800 100%);
 }
 
 * {
@@ -31,9 +33,9 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 10% 20%, rgba(198, 161, 87, 0.16), transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(15, 118, 110, 0.18), transparent 48%),
-    linear-gradient(120deg, #f7f5f1 0%, #fbf9f6 45%, #f2ede6 100%);
+    radial-gradient(circle at 10% 20%, rgba(230, 184, 0, 0.10), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(14, 164, 122, 0.13), transparent 48%),
+    var(--modern-gradient);
   z-index: -2;
 }
 
@@ -171,23 +173,28 @@ a {
 }
 
 .button.primary {
-  background: var(--ink);
+  background: var(--accent);
   color: #fff;
   box-shadow: var(--shadow-soft);
+  border: 1px solid var(--accent-dark);
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
 .button.primary:hover {
-  background: #0a0c10;
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 0 6px 24px rgba(14, 164, 122, 0.13);
 }
 
 .button.ghost {
   background: transparent;
-  border-color: var(--border);
-  color: var(--ink);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  transition: color 0.2s, border 0.2s;
 }
-
 .button.ghost:hover {
-  background: var(--surface);
+  color: var(--gold);
+  border-color: var(--gold);
 }
 
 .button.subtle {
@@ -223,16 +230,17 @@ a {
   align-items: start;
 }
 
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.8rem;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--accent-dark);
+  background: rgba(230, 184, 0, 0.10);
+  color: var(--gold);
   border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.8rem;
 }
 

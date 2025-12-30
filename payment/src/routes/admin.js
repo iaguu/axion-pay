@@ -1,54 +1,11 @@
-import { Router } from "express";
-import {
-  adminLoginHandler,
-  adminLogoutHandler,
-  approveUserHandler,
-  generateApiKeyHandler,
-  listUserApiKeysHandler,
-  listUsersHandler,
-  rejectUserHandler,
-  sendDocsToUserHandler
-} from "../controllers/adminController.js";
-import { requireAdminSession } from "../middlewares/session.js";
-import { validate } from "../middlewares/validate.js";
-import {
-  adminLoginSchema,
-  adminUserStatusSchema,
-  adminUsersQuerySchema,
-  apiKeyCreateSchema,
-  emailDocsSchema
-} from "../schemas/authSchemas.js";
+import express from 'express';
+import { listTransactions, listUsers, manageTags } from '../controllers/adminController.js';
+import { requirePermission } from '../middlewares/permissions.js';
 
-const router = Router();
+const router = express.Router();
 
-router.post("/login", validate(adminLoginSchema), adminLoginHandler);
-router.post("/logout", requireAdminSession, adminLogoutHandler);
-
-router.get("/users", requireAdminSession, validate(adminUsersQuerySchema, "query"), listUsersHandler);
-router.patch(
-  "/users/:id/approve",
-  requireAdminSession,
-  validate(adminUserStatusSchema),
-  approveUserHandler
-);
-router.patch(
-  "/users/:id/reject",
-  requireAdminSession,
-  validate(adminUserStatusSchema),
-  rejectUserHandler
-);
-router.get("/users/:id/api-keys", requireAdminSession, listUserApiKeysHandler);
-router.post(
-  "/users/:id/api-keys",
-  requireAdminSession,
-  validate(apiKeyCreateSchema),
-  generateApiKeyHandler
-);
-router.post(
-  "/users/:id/send-docs",
-  requireAdminSession,
-  validate(emailDocsSchema),
-  sendDocsToUserHandler
-);
+router.get('/transactions', requirePermission('admin:view_transactions'), listTransactions);
+router.get('/users', requirePermission('admin:view_users'), listUsers);
+router.get('/tags', requirePermission('admin:manage_tags'), manageTags);
 
 export default router;
