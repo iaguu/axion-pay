@@ -1,4 +1,5 @@
 import { db } from './db.js';
+import { v4 as uuid } from "uuid";
 
 export function createTransaction(data) {
   const stmt = db.prepare(`
@@ -65,7 +66,38 @@ export function findTransactionByProviderReference(ref) {
 }
 
 export function listTransactions(criteria = {}) {
-  const rows = db.prepare('SELECT * FROM transactions ORDER BY created_at DESC').all();
+  const where = [];
+  const params = {};
+
+  if (criteria.status) {
+    where.push("status = @status");
+    params.status = criteria.status;
+  }
+  if (criteria.method) {
+    where.push("method = @method");
+    params.method = criteria.method;
+  }
+  if (criteria.provider) {
+    where.push("provider = @provider");
+    params.provider = criteria.provider;
+  }
+  if (criteria.customerId) {
+    where.push("customer_id = @customerId");
+    params.customerId = criteria.customerId;
+  }
+  if (criteria.from) {
+    where.push("created_at >= @from");
+    params.from = criteria.from;
+  }
+  if (criteria.to) {
+    where.push("created_at <= @to");
+    params.to = criteria.to;
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const rows = db
+    .prepare(`SELECT * FROM transactions ${whereSql} ORDER BY created_at DESC`)
+    .all(params);
   return rows.map(mapRow);
 }
 
@@ -85,8 +117,35 @@ export function getTransactionByIdempotencyKey(key) {
   return null;
 }
 
-export function getTransactionEvents(id) { return []; }
-export function appendEvent(id, event) { return getTransaction(id); }
+export function getTransactionEvents(id) {
+  const rows = db
+    .prepare(
+      "SELECT * FROM transaction_events WHERE transaction_id = ? ORDER BY created_at DESC"
+    )
+    .all(id);
+  return rows.map((row) => ({
+    id: row.id,
+    transactionId: row.transaction_id,
+    type: row.type,
+    payload: row.payload ? JSON.parse(row.payload) : null,
+    created_at: row.created_at
+  }));
+}
+
+export function appendEvent(id, event) {
+  const payload = event?.payload || event;
+  const record = {
+    id: uuid(),
+    transaction_id: id,
+    type: event?.type || "event",
+    payload: payload ? JSON.stringify(payload) : null,
+    created_at: new Date().toISOString()
+  };
+  db.prepare(
+    "INSERT INTO transaction_events (id, transaction_id, type, payload, created_at) VALUES (@id, @transaction_id, @type, @payload, @created_at)"
+  ).run(record);
+  return getTransaction(id);
+}
 export function mergeTransactionMetadata(id, patch) {
   const tx = getTransaction(id);
   if (!tx) return null;

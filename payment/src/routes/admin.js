@@ -1,11 +1,38 @@
-import express from 'express';
-import { listTransactions, listUsers, manageTags } from '../controllers/adminController.js';
-import { requirePermission } from '../middlewares/permissions.js';
+import express from "express";
+import {
+  adminLoginHandler,
+  approveUserHandler,
+  listTransactions,
+  listUsers,
+  manageTags,
+  rejectUserHandler
+} from "../controllers/adminController.js";
+import { requireAdminSession } from "../middlewares/session.js";
+import { validate } from "../middlewares/validate.js";
+import {
+  adminLoginSchema,
+  adminUserStatusSchema,
+  adminUsersQuerySchema
+} from "../schemas/authSchemas.js";
 
 const router = express.Router();
 
-router.get('/transactions', requirePermission('admin:view_transactions'), listTransactions);
-router.get('/users', requirePermission('admin:view_users'), listUsers);
-router.get('/tags', requirePermission('admin:manage_tags'), manageTags);
+router.post("/login", validate(adminLoginSchema), adminLoginHandler);
+
+router.get("/transactions", requireAdminSession, listTransactions);
+router.get("/users", requireAdminSession, validate(adminUsersQuerySchema, "query"), listUsers);
+router.patch(
+  "/users/:id/approve",
+  requireAdminSession,
+  validate(adminUserStatusSchema),
+  approveUserHandler
+);
+router.patch(
+  "/users/:id/reject",
+  requireAdminSession,
+  validate(adminUserStatusSchema),
+  rejectUserHandler
+);
+router.get("/tags", requireAdminSession, manageTags);
 
 export default router;

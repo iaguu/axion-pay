@@ -33,11 +33,80 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS transaction_events (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    payload TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS idempotency_keys (
     key TEXT PRIMARY KEY,
     transaction_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    cpf TEXT,
+    company TEXT,
+    cnpj TEXT,
+    volume TEXT,
+    status TEXT NOT NULL,
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    docs_sent_at TEXT,
+    approved_at TEXT,
+    rejected_at TEXT,
+    review_notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    key_prefix TEXT NOT NULL,
+    last4 TEXT NOT NULL,
+    label TEXT,
+    created_at TEXT NOT NULL,
+    revoked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS email_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL,
+    expires_at TEXT,
+    used_at TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT,
+    revoked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_sessions (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT,
+    revoked_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS pay_tags (
@@ -64,6 +133,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_transactions_provider_ref ON transactions(provider_reference);
   CREATE INDEX IF NOT EXISTS idx_transactions_customer_id ON transactions(customer_id);
   CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);
+  CREATE INDEX IF NOT EXISTS idx_transaction_events_tx ON transaction_events(transaction_id);
+  CREATE INDEX IF NOT EXISTS idx_transaction_events_created ON transaction_events(created_at);
+  CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+  CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
 
 // Seed data
@@ -103,4 +177,3 @@ userTestPermissions.forEach(p => {
 logger.info({ dbPath }, "SQLite inicializado e populado.");
 
 export { db };
-

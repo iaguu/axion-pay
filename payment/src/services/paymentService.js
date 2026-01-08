@@ -19,6 +19,13 @@ import { AppError } from "../utils/errors.js";
 import { buildCardSummary, normalizeMetadata } from "../utils/validation.js";
 import { redactSensitiveFields } from "../utils/redact.js";
 
+function recordEvent(transactionId, type, payload) {
+  appendEvent(transactionId, {
+    type,
+    payload
+  });
+}
+
 /**
  * Cria uma transacao de pagamento (PIX ou Cartao).
  */
@@ -197,22 +204,26 @@ export async function confirmPixPaymentManually(transactionId) {
 
   const result = await confirmPixPayment(tx.providerReference);
   if (result.success) {
-    return updateTransaction(tx.id, {
+    const updated = updateTransaction(tx.id, {
       status: result.status,
       metadata: {
         ...tx.metadata,
         pixConfirmation: result.raw
       }
     });
+    recordEvent(tx.id, "pix_confirmed", result.raw);
+    return updated;
   }
 
-  return updateTransaction(tx.id, {
+  const failed = updateTransaction(tx.id, {
     status: "failed",
     metadata: {
       ...tx.metadata,
       error: result.error || "Falha ao confirmar PIX"
     }
   });
+  recordEvent(tx.id, "pix_failed", { error: result.error || "Falha ao confirmar PIX" });
+  return failed;
 }
 
 export function capturePayment(transactionId) {
@@ -227,9 +238,11 @@ export function capturePayment(transactionId) {
     throw new AppError("Status invalido para captura.", 409, "invalid_status");
   }
 
-  return updateTransaction(transactionId, {
+  const updated = updateTransaction(transactionId, {
     status: "paid"
   });
+  recordEvent(transactionId, "card_captured", null);
+  return updated;
 }
 
 export function cancelPayment(transactionId) {
@@ -241,9 +254,11 @@ export function cancelPayment(transactionId) {
     throw new AppError("Status invalido para cancelamento.", 409, "invalid_status");
   }
 
-  return updateTransaction(transactionId, {
+  const updated = updateTransaction(transactionId, {
     status: "canceled"
   });
+  recordEvent(transactionId, "payment_canceled", null);
+  return updated;
 }
 
 export function refundPayment(transactionId, amount_cents = null) {
@@ -263,13 +278,15 @@ export function refundPayment(transactionId, amount_cents = null) {
     amount_cents: amount_cents ?? tx.amount_cents
   };
 
-  return updateTransaction(transactionId, {
+  const updated = updateTransaction(transactionId, {
     status: "refunded",
     metadata: {
       ...tx.metadata,
       refund: refundDetails
     }
   });
+  recordEvent(transactionId, "payment_refunded", refundDetails);
+  return updated;
 }
 
 export function updatePaymentMetadata(transactionId, metadataPatch) {
@@ -278,8 +295,8 @@ export function updatePaymentMetadata(transactionId, metadataPatch) {
   if (!tx) {
     throw new AppError("Transacao nao encontrada.", 404, "not_found");
   }
-  const updated = appendEvent(transactionId, { type: "metadata_updated" });
-  return updated || tx;
+  recordEvent(transactionId, "metadata_updated", safePatch);
+  return tx;
 }
 
 export async function handlePixWebhook({ providerReference, event }) {
@@ -292,33 +309,41 @@ export async function handlePixWebhook({ providerReference, event }) {
   if (event === "PIX_CONFIRMED") {
     const result = await confirmPixPayment(providerReference);
     if (result.success) {
-      return updateTransaction(tx.id, {
+      const updated = updateTransaction(tx.id, {
         status: result.status,
         metadata: {
           ...tx.metadata,
           pixConfirmation: result.raw
         }
       });
+      recordEvent(tx.id, "pix_confirmed", result.raw);
+      return updated;
     }
-    return updateTransaction(tx.id, {
+    const failed = updateTransaction(tx.id, {
       status: "failed",
       metadata: {
         ...tx.metadata,
         error: result.error || "Falha ao confirmar PIX"
       }
     });
+    recordEvent(tx.id, "pix_failed", { error: result.error || "Falha ao confirmar PIX" });
+    return failed;
   }
 
   if (event === "PIX_FAILED") {
-    return updateTransaction(tx.id, {
+    const updated = updateTransaction(tx.id, {
       status: "failed"
     });
+    recordEvent(tx.id, "pix_failed", null);
+    return updated;
   }
 
   if (event === "PIX_EXPIRED") {
-    return updateTransaction(tx.id, {
+    const updated = updateTransaction(tx.id, {
       status: "expired"
     });
+    recordEvent(tx.id, "pix_expired", null);
+    return updated;
   }
 
   return tx;
@@ -370,7 +395,7 @@ export async function handleWooviWebhook(payload) {
     mappedStatus = "expired";
   }
 
-  return updateTransaction(tx.id, {
+  const updated = updateTransaction(tx.id, {
     status: mappedStatus,
     providerReference: providerReference ? String(providerReference) : tx.providerReference,
     metadata: {
@@ -378,6 +403,8 @@ export async function handleWooviWebhook(payload) {
       providerWebhook: redactSensitiveFields(payload)
     }
   });
+  recordEvent(tx.id, "provider_webhook", { provider: "woovi", status: mappedStatus });
+  return updated;
 }
 
 export async function handleInfinitePayWebhook(payload) {
@@ -411,11 +438,13 @@ export async function handleInfinitePayWebhook(payload) {
     mappedStatus = "canceled";
   }
 
-  return updateTransaction(tx.id, {
+  const updated = updateTransaction(tx.id, {
     status: mappedStatus,
     metadata: {
       ...tx.metadata,
       infiniteWebhook: redactSensitiveFields(payload)
     }
   });
+  recordEvent(tx.id, "provider_webhook", { provider: "infinitepay", status: mappedStatus });
+  return updated;
 }

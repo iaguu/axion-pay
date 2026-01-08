@@ -6,3 +6,9 @@ export class AppError extends Error {
     this.isOperational = true;
   }
 }
+
+export function isAppError(err) {
+  if (!err) return false;
+  if (err instanceof AppError) return true;
+  return Boolean(err.isOperational);
+}

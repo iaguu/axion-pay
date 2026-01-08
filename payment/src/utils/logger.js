@@ -1,10 +1,14 @@
-import pino from 'pino';
+import pino from "pino";
+import { config } from "../config/env.js";
 
 export const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true
-    }
-  }
+  level: config.logging.level,
+  transport: config.logging.pretty
+    ? {
+        target: "pino-pretty",
+        options: {
+          colorize: true
+        }
+      }
+    : undefined
 });
