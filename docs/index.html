@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AxionPAY Docs</title>
+    <style>
+      :root {
+        font-family: "Inter", system-ui, sans-serif;
+        background: #03050f;
+        color: #e5ecff;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% -10%, rgba(100, 245, 255, 0.25), transparent 40%),
+          radial-gradient(circle at 80% 0%, rgba(247, 181, 0, 0.2), transparent 45%),
+          #03050f;
+      }
+
+      .page {
+        padding: 2rem;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .brand {
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #64f5ff;
+        margin-bottom: 0.5rem;
+      }
+
+      .title {
+        font-size: clamp(2rem, 4vw, 2.6rem);
+        margin: 0;
+      }
+
+      .subtitle {
+        color: #aab6d8;
+        margin: 0.5rem 0 2rem;
+      }
+
+      .card {
+        background: rgba(3, 5, 15, 0.85);
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(100, 245, 255, 0.25);
+        box-shadow: 0 15px 40px rgba(1, 2, 7, 0.85);
+      }
+
+      .card strong {
+        font-size: 1rem;
+        color: #fff;
+      }
+
+      .tag-list {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+
+      .tag-chip {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 0.95rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .tag-chip span {
+        font-weight: 600;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #64f5ff;
+        text-decoration: none;
+        margin-top: 1rem;
+        transition: transform 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .code {
+        background: rgba(10, 12, 28, 0.95);
+        border-radius: 14px;
+        padding: 1rem;
+        font-family: "Courier New", monospace;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin-top: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      footer {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        color: #7a8096;
+        text-align: center;
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 600px) {
+        .page {
+          padding: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="brand">AxionPAY • Docs</div>
+      <h1 class="title">Pay-tags & tokens alimentados</h1>
+      <p class="subtitle">
+        Receba orientações, tokens e cURL com a estética underground do AxionPAY.
+      </p>
+
+      <div class="card">
+        <strong>Pay-tags oficiais</strong>
+        <div class="tag-list">
+          <div class="tag-chip">
+            <span>anne-tom</span>
+            <small>InfinitePay / cartão premium.</small>
+          </div>
+          <div class="tag-chip">
+            <span>GLOBAL-MP</span>
+            <small>MercadoPago global + PIX ativo.</small>
+          </div>
+          <div class="tag-chip">
+            <span>Documentação</span>
+            <a class="btn" href="http://localhost:3060/docs/" target="_blank" rel="noreferrer">
+              Consultar protocolos
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Fluxo CURL</strong>
+        <p>Veja abaixo os comandos prontos para o seu terminal.</p>
+        <div class="code">
+          curl http://localhost:3060/account/pay-tags \\
+          -H "Authorization: Bearer YOUR_TOKEN"
+        </div>
+        <div class="code">
+          curl http://localhost:3060/account/pay-tags \\
+          -X POST \\
+          -H "Authorization: Bearer YOUR_TOKEN" \\
+          -H "Content-Type: application/json" \\
+          -d '{ "name": "infra-deploy", "description": "Pay-tag mobile" }'
+        </div>
+        <div class="code">
+          curl http://localhost:3060/account/pay-tags/{tag_id}/toggle \\
+          -X PATCH \\
+          -H "Authorization: Bearer YOUR_TOKEN"
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Sessões e tokens</strong>
+        <p>
+          O login seta cookie HttpOnly com TTL de 30 dias. Use Authorization ou
+          x-session-token para executar comandos de pay-tags e receber payloads
+          assinados.
+        </p>
+        <a class="btn" href="http://localhost:3060/admin/login" target="_blank" rel="noreferrer">
+          Acessar admin e disparar tokens
+        </a>
+      </div>
+
+      <footer>AxionPAY © 2025 • Ambiente de demonstração</footer>
+    </div>
+  </body>
+</html>

@@ -38,3 +38,12 @@ Foco do gateway:
    ```
 
 3. Acesse no navegador o endereco exibido (por padrao: `http://localhost:5173`).
+
+## Build monolítico (frontend + backend)
+
+1. Copie `payment/.env.example` para `payment/.env` e ajuste variáveis sensíveis (porta, SMTP, API key, credenciais).
+2. `npm run build` na raiz — o script prepara os `.env`, compila o React/Tailwind (`web-docs`), copia o `dist` para `payment/public/app`, executa os smoke tests e empacota tudo dentro de `build/` com servidor + assets prontos para hospedar.
+3. Na pasta `build/` há um `package.json` mínimo que arranca `payment/src/index.js`, permitindo `cd build && npm install --production && npm start` para subir o deploy final na porta `3060`.
+4. A pasta `build/payment/public/app` contém um `.htaccess` que garante fallback de SPA. O backend também serve `/docs/`, `/admin`, `/dashboard` como antes, agora tudo dentro de `build/`.
+
+Use `npm start` na raiz se quiser executar o pipeline completo (build + smoke-tests + instalador em `build/payment` e `npm start` ali). Para desenvolvimento paralelo com portas separadas continue usando `node agent/run.js`.
