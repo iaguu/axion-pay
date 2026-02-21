@@ -10,7 +10,8 @@
 **/*.db
 **/*.sqlite
 **/*.sqlite3
-payment/public/app/
+public/app/
+store*.json
 
 # Logs
 logs/
